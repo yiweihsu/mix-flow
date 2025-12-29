@@ -17,8 +17,7 @@ const parsePath = (path: string): Array<string | number> => {
 
 const cloneMixState = (state: MixState): MixState => {
   return {
-    master: { ...state.master },
-    tracks: state.tracks.map((track) => ({ ...track })),
+    params: { ...state.params },
   };
 };
 

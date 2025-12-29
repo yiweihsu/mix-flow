@@ -1,4 +1,4 @@
-import type { TrackParameters } from "@/state/mix/types";
+import type { MacroParameters } from "@/state/mix/types";
 
 type ParameterMapping = {
   affects: string[];
@@ -6,29 +6,45 @@ type ParameterMapping = {
 };
 
 // Conceptual mapping only. These describe intent, not concrete DSP nodes.
-export const trackParameterMapping: Record<keyof TrackParameters, ParameterMapping> = {
-  volume: {
-    affects: ["trackGain", "loudnessTaper"],
-    description: "Scales track level with a smooth taper near silence.",
-  },
-  pan: {
-    affects: ["stereoBalance", "equalPowerPan"],
-    description: "Positions audio in the stereo field using equal-power panning.",
-  },
-  brightness: {
-    affects: ["spectralTilt", "highShelfGain", "lowShelfTrim"],
-    description: "Shifts tonal balance toward brighter or darker energy.",
+export const trackParameterMapping: Record<keyof MacroParameters, ParameterMapping> = {
+  drive: {
+    affects: ["saturationCurve", "harmonicDensity", "softClipAmount"],
+    description: "Adds harmonic energy and excitement with controlled saturation.",
   },
   punch: {
-    affects: ["transientEmphasis", "lowMidImpact", "dynamicLift"],
-    description: "Increases perceived impact by enhancing transients and weight.",
+    affects: ["transientShaper", "attackWindow", "impactFocus"],
+    description: "Accentuates attack and front-edge punch without hard clipping.",
+  },
+  body: {
+    affects: ["lowMidShelf", "thickness", "weightContour"],
+    description: "Builds low-mid weight and vocal thickness.",
   },
   presence: {
-    affects: ["upperMidFocus", "clarityEmphasis", "maskingControl"],
-    description: "Brings the track forward with added clarity and focus.",
+    affects: ["midFocus", "intelligibility", "maskControl"],
+    description: "Pushes clarity and brings the voice forward.",
+  },
+  air: {
+    affects: ["highShelf", "openness", "sparkleContour"],
+    description: "Opens up the top end for breath and air.",
   },
   space: {
-    affects: ["spaceSendLevel", "distanceRollOff", "earlyReflectionBalance"],
-    description: "Sends more of the track to the shared space and pushes it back.",
+    affects: ["reverbSend", "distance", "depthField"],
+    description: "Adds a shared space around the voice.",
+  },
+  width: {
+    affects: ["stereoSpread", "microDelay", "sideEnergy"],
+    description: "Simulates stereo width even from mono input.",
+  },
+  motion: {
+    affects: ["modDepth", "movementRate", "subtleDrift"],
+    description: "Adds gentle modulation to keep the tone alive.",
+  },
+  density: {
+    affects: ["glueCompression", "sustainLift", "dynamicContour"],
+    description: "Increases cohesion and perceived loudness.",
+  },
+  character: {
+    affects: ["toneTilt", "attitude", "edgeBalance"],
+    description: "Tilts the overall tone from dark to bright/aggressive.",
   },
 };
