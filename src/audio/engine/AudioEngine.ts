@@ -14,6 +14,7 @@ export class AudioEngine {
   private masterPan: StereoPannerNode | null = null;
   private tracks: TrackNodes[] = [];
   private playing = false;
+  private activeSources = 0;
 
   init(tracks: TrackState[]) {
     if (this.context) {
@@ -78,6 +79,7 @@ export class AudioEngine {
     }
 
     const startTime = this.context.currentTime + 0.01;
+    this.activeSources = 0;
     this.tracks.forEach((track) => {
       if (!track.buffer || !track.enabled) {
         track.source = null;
@@ -90,12 +92,24 @@ export class AudioEngine {
       }
 
       source.buffer = track.buffer;
+      source.onended = () => {
+        this.activeSources = Math.max(0, this.activeSources - 1);
+        if (this.activeSources === 0 && this.playing) {
+          this.playing = false;
+          if (this.context?.state === "running") {
+            void this.context.suspend();
+          }
+        }
+      };
       source.connect(track.gain);
       track.source = source;
       source.start(startTime);
+      this.activeSources += 1;
     });
 
-    this.playing = true;
+    if (this.activeSources > 0) {
+      this.playing = true;
+    }
   }
 
   stop() {
@@ -108,6 +122,7 @@ export class AudioEngine {
         return;
       }
 
+      track.source.onended = null;
       try {
         track.source.stop();
       } catch {
@@ -122,6 +137,7 @@ export class AudioEngine {
     }
 
     this.playing = false;
+    this.activeSources = 0;
   }
 
   update(mixState: MixState) {
@@ -169,5 +185,6 @@ export class AudioEngine {
     this.masterGain = null;
     this.masterPan = null;
     this.playing = false;
+    this.activeSources = 0;
   }
 }
