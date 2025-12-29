@@ -200,24 +200,49 @@ main {
 .commit-list {
   display: grid;
   gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .commit-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: #ffffff;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
-.commit-meta {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  margin-bottom: 4px;
-  font-size: 0.75rem;
+.commit-item.user {
+  border-left: 4px solid var(--accent);
+  background: #f3faf8;
+}
+
+.commit-item.ai {
+  border-left: 4px solid #c78f2b;
+  background: #fff6e8;
+}
+
+.commit-author {
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.commit-message {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commit-time {
+  font-size: 0.7rem;
+  color: var(--muted);
 }
 
 .hero {

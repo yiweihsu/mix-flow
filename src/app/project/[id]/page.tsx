@@ -566,12 +566,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             .slice()
             .reverse()
             .map((entry) => (
-              <div className="commit-item" key={entry.id}>
-                <div className="commit-meta">
-                  <span>{entry.author}</span>
-                  <span>{new Date(entry.timestamp).toLocaleTimeString()}</span>
-                </div>
-                <div>{entry.message}</div>
+              <div className={`commit-item ${entry.author}`} key={entry.id}>
+                <span className="commit-author">{entry.author === "user" ? "USER" : "AI"}</span>
+                <span className="commit-message">{entry.message}</span>
+                <span className="commit-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
               </div>
             ))}
         </div>
