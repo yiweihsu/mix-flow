@@ -1,7 +1,17 @@
 import type { MacroParameters } from "@/state/mix/types";
 
+type VocalCleanupParameters = {
+  noiseClean?: number;
+  roomControl?: number;
+};
+
+type EngineParameters = MacroParameters & VocalCleanupParameters;
+
 type ProcessingChain = {
   inputGain: GainNode;
+  noiseHighPass: BiquadFilterNode;
+  noiseExpander: DynamicsCompressorNode;
+  roomEq: BiquadFilterNode;
   drive: WaveShaperNode;
   body: BiquadFilterNode;
   presence: BiquadFilterNode;
@@ -84,6 +94,20 @@ export class AudioEngine {
 
   private buildChain(context: BaseAudioContext) {
     const inputGain = context.createGain();
+    const noiseHighPass = context.createBiquadFilter();
+    noiseHighPass.type = "highpass";
+    noiseHighPass.frequency.value = 100;
+
+    const noiseExpander = context.createDynamicsCompressor();
+    noiseExpander.attack.value = 0.005;
+    noiseExpander.release.value = 0.18;
+    noiseExpander.knee.value = 12;
+
+    const roomEq = context.createBiquadFilter();
+    roomEq.type = "peaking";
+    roomEq.frequency.value = 300;
+    roomEq.Q.value = 1.1;
+
     const drive = context.createWaveShaper();
     drive.oversample = "4x";
 
@@ -140,7 +164,10 @@ export class AudioEngine {
     const masterGain = context.createGain();
     masterGain.gain.value = this.outputVolume;
 
-    inputGain.connect(drive);
+    inputGain.connect(noiseHighPass);
+    noiseHighPass.connect(noiseExpander);
+    noiseExpander.connect(roomEq);
+    roomEq.connect(drive);
     drive.connect(body);
     body.connect(presence);
     presence.connect(air);
@@ -169,6 +196,9 @@ export class AudioEngine {
 
     return {
       inputGain,
+      noiseHighPass,
+      noiseExpander,
+      roomEq,
       drive,
       body,
       presence,
@@ -311,13 +341,37 @@ export class AudioEngine {
     this.playing = false;
   }
 
-  update(params: MacroParameters, outputVolume: number = this.outputVolume) {
+  update(params: EngineParameters, outputVolume: number = this.outputVolume) {
     if (!this.context || !this.chain) {
       return;
     }
 
+    const noiseClean = params.noiseClean ?? 0;
+    const roomControl = params.roomControl ?? 0;
+
     this.outputVolume = outputVolume;
     const timeConstant = 0.05;
+
+    this.applySmoothing(
+      this.chain.noiseHighPass.frequency,
+      this.mapRange(noiseClean, 0, 1, 80, 150),
+      timeConstant,
+    );
+    this.applySmoothing(
+      this.chain.noiseExpander.threshold,
+      this.mapRange(noiseClean, 0, 1, -55, -35),
+      timeConstant,
+    );
+    this.applySmoothing(
+      this.chain.noiseExpander.ratio,
+      this.mapRange(noiseClean, 0, 1, 1.5, 3),
+      timeConstant,
+    );
+    this.applySmoothing(
+      this.chain.roomEq.gain,
+      this.mapRange(roomControl, 0, 1, 0, -6),
+      timeConstant,
+    );
 
     this.chain.drive.curve = this.createDriveCurve(params.drive);
 
@@ -351,11 +405,9 @@ export class AudioEngine {
     this.applySmoothing(this.chain.characterLow.gain, -tilt * 5, timeConstant);
     this.applySmoothing(this.chain.characterHigh.gain, tilt * 5, timeConstant);
 
-    this.applySmoothing(
-      this.chain.reverbSend.gain,
-      Math.pow(Math.min(1, Math.max(0, params.space)), 2) * 0.65,
-      timeConstant,
-    );
+    const baseReverbSend = Math.pow(Math.min(1, Math.max(0, params.space)), 2) * 0.65;
+    const roomDamp = this.mapRange(roomControl, 0, 1, 1, 0.8);
+    this.applySmoothing(this.chain.reverbSend.gain, baseReverbSend * roomDamp, timeConstant);
 
     this.applySmoothing(
       this.chain.widthLeftDelay.delayTime,
@@ -378,7 +430,7 @@ export class AudioEngine {
     this.applySmoothing(this.chain.masterGain.gain, outputVolume, timeConstant);
   }
 
-  async renderOffline(params: MacroParameters, outputVolume: number = this.outputVolume) {
+  async renderOffline(params: EngineParameters, outputVolume: number = this.outputVolume) {
     if (!this.buffer) {
       throw new Error("No audio buffer loaded.");
     }
@@ -394,6 +446,14 @@ export class AudioEngine {
     const source = offline.createBufferSource();
     source.buffer = this.buffer;
     source.connect(chain.inputGain);
+
+    const noiseClean = params.noiseClean ?? 0;
+    const roomControl = params.roomControl ?? 0;
+
+    chain.noiseHighPass.frequency.value = this.mapRange(noiseClean, 0, 1, 80, 150);
+    chain.noiseExpander.threshold.value = this.mapRange(noiseClean, 0, 1, -55, -35);
+    chain.noiseExpander.ratio.value = this.mapRange(noiseClean, 0, 1, 1.5, 3);
+    chain.roomEq.gain.value = this.mapRange(roomControl, 0, 1, 0, -6);
 
     chain.drive.curve = this.createDriveCurve(params.drive);
 
@@ -415,8 +475,9 @@ export class AudioEngine {
     chain.characterLow.gain.value = -tilt * 5;
     chain.characterHigh.gain.value = tilt * 5;
 
-    chain.reverbSend.gain.value =
-      Math.pow(Math.min(1, Math.max(0, params.space)), 2) * 0.65;
+    const baseReverbSend = Math.pow(Math.min(1, Math.max(0, params.space)), 2) * 0.65;
+    const roomDamp = this.mapRange(roomControl, 0, 1, 1, 0.8);
+    chain.reverbSend.gain.value = baseReverbSend * roomDamp;
 
     chain.widthLeftDelay.delayTime.value = this.mapRange(params.width, 0, 1, 0, 0.006);
     chain.widthRightDelay.delayTime.value = this.mapRange(params.width, 0, 1, 0, 0.02);
@@ -434,6 +495,9 @@ export class AudioEngine {
     if (this.chain) {
       this.chain.motionLfo.stop();
       this.chain.inputGain.disconnect();
+      this.chain.noiseHighPass.disconnect();
+      this.chain.noiseExpander.disconnect();
+      this.chain.roomEq.disconnect();
       this.chain.drive.disconnect();
       this.chain.body.disconnect();
       this.chain.presence.disconnect();
