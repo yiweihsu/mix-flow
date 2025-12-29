@@ -1,18 +1,24 @@
-export type TrackState = {
+export type TrackParameters = {
+  /** Normalized (0 -> 1). Default 0.6. Controls perceived loudness. */
   volume: number;
+  /** Normalized (-1 -> 1). Default 0. Centers at 0, left/right at extremes. */
   pan: number;
-  punch: number;
+  /** Normalized (0 -> 1). Default 0.5. Controls overall light/dark tone. */
   brightness: number;
+  /** Normalized (0 -> 1). Default 0.5. Controls impact and transient weight. */
+  punch: number;
+  /** Normalized (0 -> 1). Default 0.5. Controls forwardness and clarity. */
+  presence: number;
+  /** Normalized (0 -> 1). Default 0. Controls distance in shared space. */
+  space: number;
+};
+
+export type TrackState = TrackParameters & {
   fileName?: string;
   hasAudio: boolean;
 };
 
-export type MasterState = {
-  volume: number;
-  pan: number;
-  punch: number;
-  brightness: number;
-};
+export type MasterState = Pick<TrackParameters, "volume" | "pan" | "punch" | "brightness">;
 
 export type MixState = {
   tracks: TrackState[];
