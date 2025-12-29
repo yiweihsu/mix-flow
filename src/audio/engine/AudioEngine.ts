@@ -1,9 +1,11 @@
 import type { MixState, TrackState } from "@/state/mix/types";
 
 type TrackNodes = {
-  oscillator: OscillatorNode;
   gain: GainNode;
   pan: StereoPannerNode;
+  source: AudioBufferSourceNode | null;
+  buffer: AudioBuffer | null;
+  enabled: boolean;
 };
 
 export class AudioEngine {
@@ -11,6 +13,7 @@ export class AudioEngine {
   private masterGain: GainNode | null = null;
   private masterPan: StereoPannerNode | null = null;
   private tracks: TrackNodes[] = [];
+  private playing = false;
 
   init(tracks: TrackState[]) {
     if (this.context) {
@@ -27,28 +30,98 @@ export class AudioEngine {
     this.context = context;
     this.masterGain = masterGain;
     this.masterPan = masterPan;
-    this.tracks = tracks.map((_, index) => {
-      const oscillator = context.createOscillator();
-      oscillator.type = "sine";
-      oscillator.frequency.value = 220 + index * 110;
-
+    this.tracks = tracks.map((track) => {
       const gain = context.createGain();
       const pan = context.createStereoPanner();
 
-      oscillator.connect(gain);
       gain.connect(pan);
       pan.connect(masterGain);
 
-      oscillator.start();
-
-      return { oscillator, gain, pan };
+      return {
+        gain,
+        pan,
+        source: null,
+        buffer: null,
+        enabled: track.hasAudio,
+      };
     });
   }
 
-  resume() {
-    if (this.context && this.context.state === "suspended") {
-      this.context.resume();
+  get isPlaying() {
+    return this.playing;
+  }
+
+  decodeAudioData(data: ArrayBuffer) {
+    if (!this.context) {
+      throw new Error("Audio engine not initialized.");
     }
+
+    return this.context.decodeAudioData(data);
+  }
+
+  setTrackBuffer(index: number, buffer: AudioBuffer | null) {
+    const track = this.tracks[index];
+    if (!track) {
+      return;
+    }
+
+    track.buffer = buffer;
+  }
+
+  play() {
+    if (!this.context || this.playing) {
+      return;
+    }
+
+    if (this.context.state === "suspended") {
+      void this.context.resume();
+    }
+
+    const startTime = this.context.currentTime + 0.01;
+    this.tracks.forEach((track) => {
+      if (!track.buffer || !track.enabled) {
+        track.source = null;
+        return;
+      }
+
+      const source = this.context?.createBufferSource();
+      if (!source) {
+        return;
+      }
+
+      source.buffer = track.buffer;
+      source.connect(track.gain);
+      track.source = source;
+      source.start(startTime);
+    });
+
+    this.playing = true;
+  }
+
+  stop() {
+    if (!this.context || !this.playing) {
+      return;
+    }
+
+    this.tracks.forEach((track) => {
+      if (!track.source) {
+        return;
+      }
+
+      try {
+        track.source.stop();
+      } catch {
+        // Ignore sources that already stopped.
+      }
+      track.source.disconnect();
+      track.source = null;
+    });
+
+    if (this.context.state === "running") {
+      void this.context.suspend();
+    }
+
+    this.playing = false;
   }
 
   update(mixState: MixState) {
@@ -67,13 +140,13 @@ export class AudioEngine {
 
       nodes.gain.gain.value = track.volume;
       nodes.pan.pan.value = track.pan;
+      nodes.enabled = track.hasAudio;
     });
   }
 
   dispose() {
+    this.stop();
     this.tracks.forEach((track) => {
-      track.oscillator.stop();
-      track.oscillator.disconnect();
       track.gain.disconnect();
       track.pan.disconnect();
     });
@@ -95,5 +168,6 @@ export class AudioEngine {
     this.context = null;
     this.masterGain = null;
     this.masterPan = null;
+    this.playing = false;
   }
 }
