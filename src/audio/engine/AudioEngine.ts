@@ -266,6 +266,14 @@ export class AudioEngine {
     return this.context.decodeAudioData(data);
   }
 
+  async decodeAudioData(data: ArrayBuffer) {
+    if (!this.context) {
+      throw new Error("Audio engine not initialized.");
+    }
+
+    return this.context.decodeAudioData(data);
+  }
+
   setBuffer(buffer: AudioBuffer | null) {
     this.buffer = buffer;
     this.pauseOffset = 0;

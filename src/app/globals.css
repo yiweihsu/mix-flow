@@ -82,12 +82,6 @@ main {
   margin-bottom: 8px;
 }
 
-.console-subtitle {
-  color: var(--muted);
-  font-size: 1.05rem;
-  max-width: 420px;
-}
-
 .console-meta {
   display: grid;
   gap: 14px;
@@ -148,6 +142,24 @@ main {
   letter-spacing: 0.04em;
 }
 
+.upload-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .output-panel {
   border-radius: 18px;
   border: 1px solid rgba(27, 26, 23, 0.12);
@@ -171,12 +183,6 @@ main {
   color: var(--muted);
   display: block;
   margin-bottom: 6px;
-}
-
-.output-description {
-  font-size: 0.85rem;
-  color: var(--muted);
-  display: block;
 }
 
 .output-value {
@@ -303,12 +309,6 @@ main {
   color: var(--muted);
   display: block;
   margin-bottom: 6px;
-}
-
-.macro-description {
-  font-size: 0.85rem;
-  color: var(--muted);
-  display: block;
 }
 
 .macro-value {

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "@/audio/engine/AudioEngine";
 import type { MacroParameters } from "@/state/mix/types";
 import { CHARACTER_PRESETS, DEFAULT_CHARACTER_PRESET } from "@/state/mix/presets";
@@ -8,7 +8,6 @@ import { CHARACTER_PRESETS, DEFAULT_CHARACTER_PRESET } from "@/state/mix/presets
 type SliderDefinition = {
   key: keyof MacroParameters;
   label: string;
-  description: string;
 };
 
 const DEMO_VOICE_URL = "/demo-audio/demo-voice.mp3";
@@ -17,18 +16,18 @@ const DEFAULT_PARAMS: MacroParameters = DEFAULT_CHARACTER_PRESET.params;
 const DEFAULT_OUTPUT_VOLUME = DEFAULT_CHARACTER_PRESET.masterOutput;
 
 const SLIDERS: SliderDefinition[] = [
-  { key: "noiseClean", label: "Noise Clean", description: "Tame background noise gently." },
-  { key: "roomControl", label: "Room Control", description: "Reduce roominess for a closer vocal." },
-  { key: "drive", label: "Drive", description: "Harmonic energy + saturation." },
-  { key: "punch", label: "Punch", description: "Transient emphasis + attack." },
-  { key: "body", label: "Body", description: "Low-mid weight + thickness." },
-  { key: "presence", label: "Presence", description: "Intelligibility + focus." },
-  { key: "air", label: "Air", description: "High-frequency openness." },
-  { key: "space", label: "Space", description: "Reverb amount + depth." },
-  { key: "width", label: "Width", description: "Stereo spread simulation." },
-  { key: "motion", label: "Motion", description: "Subtle modulation + life." },
-  { key: "density", label: "Density", description: "Compression + glue feel." },
-  { key: "character", label: "Character", description: "Tone tilt + attitude." },
+  { key: "noiseClean", label: "Noise Clean" },
+  { key: "roomControl", label: "Room Control" },
+  { key: "drive", label: "Drive" },
+  { key: "punch", label: "Punch" },
+  { key: "body", label: "Body" },
+  { key: "presence", label: "Presence" },
+  { key: "air", label: "Air" },
+  { key: "space", label: "Space" },
+  { key: "width", label: "Width" },
+  { key: "motion", label: "Motion" },
+  { key: "density", label: "Density" },
+  { key: "character", label: "Character" },
 ];
 
 const formatTime = (value: number) => {
@@ -85,18 +84,22 @@ const encodeWav = (buffer: AudioBuffer) => {
   return new Blob([arrayBuffer], { type: "audio/wav" });
 };
 
-export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ProjectPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const engineRef = useRef<AudioEngine | null>(null);
   const [paramsState, setParamsState] = useState<MacroParameters>(DEFAULT_PARAMS);
   const [outputVolume, setOutputVolume] = useState(DEFAULT_OUTPUT_VOLUME);
   const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_CHARACTER_PRESET.id);
   const [isReady, setIsReady] = useState(false);
+  const [isLoadingSource, setIsLoadingSource] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [sourceLabel, setSourceLabel] = useState("No audio");
   const rafRef = useRef<number | null>(null);
+
+  const sourceStatus = isLoadingSource ? "Loading..." : sourceLabel;
 
   const sliderRows = useMemo(
     () => SLIDERS.map((slider) => ({ ...slider, value: paramsState[slider.key] })),
@@ -109,25 +112,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     engine.update(paramsState, DEFAULT_OUTPUT_VOLUME);
     engineRef.current = engine;
 
-    let cancelled = false;
-    const loadDemo = async () => {
-      try {
-        const buffer = await engine.fetchAudioBuffer(DEMO_VOICE_URL);
-        if (cancelled) {
-          return;
-        }
-        engine.setBuffer(buffer);
-        setDuration(buffer.duration);
-        setIsReady(true);
-      } catch (error) {
-        console.error("Failed to load demo voice", error);
-      }
-    };
-
-    void loadDemo();
-
     return () => {
-      cancelled = true;
       engine.dispose();
     };
   }, []);
@@ -176,6 +161,58 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     engineRef.current?.update(nextParams, nextOutput);
   };
 
+  const loadBuffer = (buffer: AudioBuffer, label: string) => {
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+    engine.stop();
+    engine.setBuffer(buffer);
+    setDuration(buffer.duration);
+    setIsReady(true);
+    setIsPlaying(false);
+    setPlaybackTime(0);
+    setSourceLabel(label);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+    setIsLoadingSource(true);
+    try {
+      const data = await file.arrayBuffer();
+      const buffer = await engine.decodeAudioData(data);
+      loadBuffer(buffer, file.name);
+    } catch (error) {
+      console.error("Failed to load uploaded audio", error);
+    } finally {
+      setIsLoadingSource(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleLoadDemo = async () => {
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+    setIsLoadingSource(true);
+    try {
+      const buffer = await engine.fetchAudioBuffer(DEMO_VOICE_URL);
+      loadBuffer(buffer, "Demo voice");
+    } catch (error) {
+      console.error("Failed to load demo voice", error);
+    } finally {
+      setIsLoadingSource(false);
+    }
+  };
+
   const handleTransportToggle = () => {
     const engine = engineRef.current;
     if (!engine) {
@@ -214,11 +251,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <section className="console">
         <header className="console-header">
           <div>
-            <p className="console-kicker">Single-track voice instrument</p>
             <h1>Vocal Playground</h1>
-            <p className="console-subtitle">
-              One voice, one chain. Shape it live.
-            </p>
           </div>
           <div className="console-meta">
             <div>
@@ -227,10 +260,32 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </div>
             <div>
               <span className="meta-label">Source</span>
-              <span className="meta-value">Demo voice loaded</span>
+              <span className="meta-value">{sourceStatus}</span>
             </div>
           </div>
         </header>
+
+        <div className="upload-panel">
+          <label className="button upload-button" htmlFor="audio-upload">
+            Upload audio
+          </label>
+          <input
+            id="audio-upload"
+            className="upload-input"
+            type="file"
+            accept="audio/*"
+            onChange={handleFileUpload}
+            disabled={isLoadingSource}
+          />
+          <button
+            className="button secondary"
+            type="button"
+            onClick={handleLoadDemo}
+            disabled={isLoadingSource}
+          >
+            Load demo
+          </button>
+        </div>
 
         <div className="transport-bar">
           <div className="transport-spacer" />
@@ -279,7 +334,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <div className="output-header">
             <div>
               <span className="output-label">Output</span>
-              <span className="output-description">Master output level.</span>
             </div>
             <span className="output-value">{outputVolume.toFixed(2)}</span>
           </div>
@@ -299,7 +353,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               <div className="macro-header">
                 <div>
                   <span className="macro-label">{slider.label}</span>
-                  <span className="macro-description">{slider.description}</span>
                 </div>
                 <span className="macro-value">{slider.value.toFixed(2)}</span>
               </div>
