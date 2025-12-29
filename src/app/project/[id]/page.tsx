@@ -13,6 +13,7 @@ import {
 import type { Commit } from "@/state/history/types";
 import { applyPatch } from "@/state/mix/reducer";
 import type { MasterState, MixPatchOp, MixState, TrackState } from "@/state/mix/types";
+import { createPreviewState, updatePreviewFrame, type PreviewState } from "@/state/preview/types";
 
 type DemoAsset = {
   fileName: string;
@@ -26,12 +27,8 @@ const DEMO_ASSETS: DemoAsset[] = [
   { fileName: "demo-bed.mp3", url: "/demo-audio/demo-bed.mp3" },
   { fileName: "demo-voice.mp3", url: "/demo-audio/demo-voice.mp3" },
 ];
-type TransportState = {
-  playing: boolean;
-  paused: boolean;
-  currentTime: number;
-  duration: number;
-};
+const PREVIEW_FPS = 30;
+const PREVIEW_TIMELINE_BASE_SECONDS = 30;
 
 const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
   const baseTracks = [
@@ -168,7 +165,7 @@ const buildAiPatch = (text: string, mixState: MixState): MixPatchOp[] => {
 
 const formatValue = (value: number) => value.toFixed(2);
 const formatSeconds = (value: number) => `${value.toFixed(1)}s`;
-const formatTransportTime = (value: number) => {
+const formatPreviewTime = (value: number) => {
   const minutes = Math.floor(value / 60);
   const seconds = value % 60;
   return `${String(minutes).padStart(2, "0")}:${seconds.toFixed(2).padStart(5, "0")}`;
@@ -187,22 +184,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   );
   const [historyState, setHistoryState] = useState(createHistoryState());
   const [prompt, setPrompt] = useState("");
-  const [transport, setTransport] = useState<TransportState>({
-    playing: false,
-    paused: false,
-    currentTime: 0,
-    duration: 0,
-  });
+  const [preview, setPreview] = useState<PreviewState>(() => createPreviewState(PREVIEW_FPS));
   const engineRef = useRef<AudioEngine | null>(null);
   const mixStateRef = useRef(mixState);
   const sliderDragStartRef = useRef<Record<string, number>>({});
-  const playStartTimeRef = useRef(0);
-  const playStartTimestampRef = useRef<number | null>(null);
+  const previewStartFrameRef = useRef(0);
+  const previewStartTimestampRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+  const hasAnnouncedPreviewRef = useRef(false);
   const canUndo = historyState.cursor >= 0;
   const canRedo = historyState.cursor < historyState.commits.length - 1;
-  const hasPlayableAudio = mixState.tracks.some((track) => track.hasAudio);
-  const canPlay = hasPlayableAudio && transport.duration > 0;
+  const canPlayPreview = preview.fps > 0;
   const projectDuration = useMemo(() => {
     return mixState.tracks.reduce((maxDuration, track, index) => {
       if (!track.hasAudio) {
@@ -222,7 +214,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     engine.init(initialMixState.tracks);
     engine.update(initialMixState);
     engineRef.current = engine;
-    setTransport((prev) => ({ ...prev, playing: false, paused: false, currentTime: 0 }));
+    setPreview((prev) => updatePreviewFrame(prev, 0, false));
 
     return () => engine.dispose();
   }, [initialMixState]);
@@ -274,50 +266,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     engineRef.current?.update(mixState);
   }, [mixState]);
-
-  useEffect(() => {
-    if (projectDuration <= 0) {
-      engineRef.current?.stop();
-      playStartTimeRef.current = 0;
-      playStartTimestampRef.current = null;
-    }
-
-    setTransport((prev) => {
-      const nextDuration = projectDuration;
-      let nextCurrentTime = prev.currentTime;
-      let nextPlaying = prev.playing;
-      let nextPaused = prev.paused;
-
-      if (nextDuration <= 0) {
-        nextCurrentTime = 0;
-        nextPlaying = false;
-        nextPaused = false;
-      } else if (nextCurrentTime > nextDuration) {
-        nextCurrentTime = nextDuration;
-        if (prev.playing) {
-          playStartTimeRef.current = nextCurrentTime;
-          playStartTimestampRef.current = performance.now();
-        }
-      }
-
-      if (
-        nextDuration === prev.duration &&
-        nextCurrentTime === prev.currentTime &&
-        nextPlaying === prev.playing &&
-        nextPaused === prev.paused
-      ) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        duration: nextDuration,
-        currentTime: nextCurrentTime,
-        playing: nextPlaying,
-        paused: nextPaused,
-      };
-    });
-  }, [projectDuration]);
 
   const commits = getVisibleCommits(historyState);
 
@@ -494,29 +442,30 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     applyPatchWithCommit("user", `Load audio into Track ${trackIndex + 1}`, diff);
   };
 
-  const handlePlay = () => {
-    if (!canPlay || transport.playing) {
+  const handlePreviewPlay = () => {
+    if (!canPlayPreview || preview.is_playing) {
       return;
     }
-    const engine = engineRef.current;
-    engine?.play();
-    playStartTimeRef.current = transport.currentTime;
-    playStartTimestampRef.current = performance.now();
-    setTransport((prev) => ({ ...prev, playing: true, paused: false }));
+    if (!hasAnnouncedPreviewRef.current) {
+      console.log("[vfx] Preview is visual-only.");
+      console.log("[vfx] Audio is preserved during render/export.");
+      hasAnnouncedPreviewRef.current = true;
+    }
+    previewStartFrameRef.current = preview.frame_index;
+    previewStartTimestampRef.current = performance.now();
+    setPreview((prev) => updatePreviewFrame(prev, prev.frame_index, true));
   };
 
-  const handlePause = () => {
-    engineRef.current?.stop();
-    setTransport((prev) => ({ ...prev, playing: false, paused: true }));
-    playStartTimeRef.current = transport.currentTime;
-    playStartTimestampRef.current = null;
+  const handlePreviewPause = () => {
+    previewStartFrameRef.current = preview.frame_index;
+    previewStartTimestampRef.current = null;
+    setPreview((prev) => updatePreviewFrame(prev, prev.frame_index, false));
   };
 
-  const handleStop = () => {
-    engineRef.current?.stop();
-    setTransport((prev) => ({ ...prev, playing: false, paused: false, currentTime: 0 }));
-    playStartTimeRef.current = 0;
-    playStartTimestampRef.current = null;
+  const handlePreviewStop = () => {
+    previewStartFrameRef.current = 0;
+    previewStartTimestampRef.current = null;
+    setPreview((prev) => updatePreviewFrame(prev, 0, false));
   };
 
   const handleUndo = () => {
@@ -542,7 +491,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   useEffect(() => {
-    if (!transport.playing) {
+    if (!preview.is_playing) {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
@@ -551,27 +500,23 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
 
     const tick = () => {
-      const startTimestamp = playStartTimestampRef.current ?? performance.now();
-      if (playStartTimestampRef.current === null) {
-        playStartTimestampRef.current = startTimestamp;
+      const startTimestamp = previewStartTimestampRef.current ?? performance.now();
+      if (previewStartTimestampRef.current === null) {
+        previewStartTimestampRef.current = startTimestamp;
       }
       const elapsed = (performance.now() - startTimestamp) / 1000;
-      const nextTime = clamp(playStartTimeRef.current + elapsed, 0, transport.duration);
-      setTransport((prev) => {
-        if (!prev.playing) {
+      const nextFrameIndex = Math.max(
+        0,
+        Math.floor(previewStartFrameRef.current + elapsed * preview.fps),
+      );
+      setPreview((prev) => {
+        if (!prev.is_playing) {
           return prev;
         }
-        const clampedTime = clamp(playStartTimeRef.current + elapsed, 0, prev.duration);
-        if (prev.duration > 0 && clampedTime >= prev.duration) {
-          engineRef.current?.stop();
-          playStartTimestampRef.current = null;
-          playStartTimeRef.current = 0;
-          return { ...prev, currentTime: prev.duration, playing: false, paused: false };
-        }
-        if (Math.abs(prev.currentTime - clampedTime) < 0.001) {
+        if (prev.frame_index === nextFrameIndex) {
           return prev;
         }
-        return { ...prev, currentTime: clampedTime };
+        return updatePreviewFrame(prev, nextFrameIndex, true);
       });
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -584,26 +529,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         rafRef.current = null;
       }
     };
-  }, [transport.playing, transport.duration]);
+  }, [preview.is_playing, preview.fps]);
 
+  const visualTimelineSeconds = Math.max(
+    PREVIEW_TIMELINE_BASE_SECONDS,
+    preview.visual_time_seconds,
+    projectDuration,
+  );
   const playheadPercent =
-    transport.duration > 0
-      ? clamp((transport.currentTime / transport.duration) * 100, 0, 100)
+    visualTimelineSeconds > 0
+      ? clamp((preview.visual_time_seconds / visualTimelineSeconds) * 100, 0, 100)
       : 0;
   const timelineMarks = useMemo(() => {
-    if (transport.duration <= 0) {
+    if (visualTimelineSeconds <= 0) {
       return [0];
     }
     const marks: number[] = [];
     const step = 5;
-    for (let mark = 0; mark <= transport.duration; mark += step) {
+    for (let mark = 0; mark <= visualTimelineSeconds; mark += step) {
       marks.push(mark);
     }
-    if (marks[marks.length - 1] !== transport.duration) {
-      marks.push(transport.duration);
+    if (marks[marks.length - 1] !== visualTimelineSeconds) {
+      marks.push(visualTimelineSeconds);
     }
     return marks;
-  }, [transport.duration]);
+  }, [visualTimelineSeconds]);
 
   return (
     <main className="app-shell">
@@ -617,16 +567,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <button
               className="button"
               type="button"
-              onClick={transport.playing ? handlePause : handlePlay}
-              disabled={!canPlay}
+              onClick={preview.is_playing ? handlePreviewPause : handlePreviewPlay}
+              disabled={!canPlayPreview}
             >
-              {transport.playing ? "Pause" : "Play"}
+              {preview.is_playing ? "Pause (visual)" : "Play (visual)"}
             </button>{" "}
             <button
               className="button secondary"
               type="button"
-              onClick={handleStop}
-              disabled={!transport.playing && !transport.paused}
+              onClick={handlePreviewStop}
+              disabled={!preview.is_playing && preview.frame_index === 0}
             >
               Stop
             </button>{" "}
@@ -637,15 +587,24 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               Redo
             </button>
             <div className="transport-time">
-              <span className="transport-time-label">Time</span>
+              <span className="transport-time-label">Visual time</span>
               <span className="transport-time-value">
-                {formatTransportTime(transport.currentTime)}
+                {formatPreviewTime(preview.visual_time_seconds)}
               </span>
             </div>
           </div>
         </div>
 
+        <div className="section-title">Preview</div>
+        <div className="preview-window">
+          <div className="preview-overlay">
+            <span>PREVIEW MODE — Visual only</span>
+            <span>Audio will be preserved on export</span>
+          </div>
+        </div>
+
         <div className="timeline">
+          <div className="timeline-label">Visual timeline (preview)</div>
           <div className="timeline-ruler">
             {timelineMarks.map((mark) => (
               <div className="timeline-mark" key={`timeline-${mark}`}>
@@ -657,12 +616,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             {mixState.tracks.map((track, index) => {
               const clipDuration = trackDurations[index] ?? 0;
               const clipLeft =
-                transport.duration > 0
-                  ? (track.startOffset / transport.duration) * 100
+                visualTimelineSeconds > 0
+                  ? (track.startOffset / visualTimelineSeconds) * 100
                   : 0;
               const clipWidth =
-                transport.duration > 0 ? (clipDuration / transport.duration) * 100 : 0;
-              const showClip = track.hasAudio && clipDuration > 0 && transport.duration > 0;
+                visualTimelineSeconds > 0
+                  ? (clipDuration / visualTimelineSeconds) * 100
+                  : 0;
+              const showClip = track.hasAudio && clipDuration > 0 && visualTimelineSeconds > 0;
 
               return (
                 <div className="timeline-track" key={`timeline-track-${index}`}>

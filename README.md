@@ -9,13 +9,20 @@ commit so humans can review what the AI suggests.
 - Mixing as state, not plugins.
 - AI modifies state via JSON patches.
 - Every change becomes a commit in the history.
-- Web Audio API provides real-time preview (no server-side audio processing).
+- Web Audio API handles audio processing (no server-side audio processing).
 
 ## MVP Notes
 
 - No authentication.
 - No database (in-memory state only).
 - LLM calls are stubbed.
+
+### Preview Mode
+
+- Preview mode is visual-only by design.
+- Audio playback is intentionally disabled.
+- Audio is preserved automatically during render/export.
+- This matches professional VFX / motion tools (AE, Nuke, TouchDesigner).
 
 ## Run locally
 

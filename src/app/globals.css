@@ -133,6 +133,40 @@ main {
   gap: 10px;
 }
 
+.timeline-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.preview-window {
+  position: relative;
+  width: min(100%, 800px);
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #ebe4d6, #f8f2e8 55%, #e4eee9);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.preview-overlay {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(27, 27, 27, 0.75);
+  color: #fffaf1;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
 .timeline-ruler {
   width: 100%;
   height: 32px;
