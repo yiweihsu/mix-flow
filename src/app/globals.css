@@ -83,6 +83,17 @@ main {
   margin-bottom: 12px;
 }
 
+.track-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mute-button {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+}
+
 .transport-controls {
   display: flex;
   flex-wrap: wrap;

@@ -17,6 +17,7 @@ export type TrackState = TrackParameters & {
   fileName?: string;
   hasAudio: boolean;
   isDemo: boolean;
+  muted: boolean;
 };
 
 export type MasterState = Pick<TrackParameters, "volume" | "pan" | "punch" | "brightness">;

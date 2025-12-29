@@ -246,6 +246,9 @@ export class AudioEngine {
       nodes.compressor.ratio.value = this.mapRange(track.punch, 0, 1, 2, 6);
       // volume -> track gain (exponential curve)
       nodes.gain.gain.value = Math.pow(track.volume, 2);
+      if (track.muted) {
+        nodes.gain.gain.value = 0;
+      }
       // pan -> stereo panner (-1 to 1)
       nodes.pan.pan.value = track.pan;
       // space -> reverb send amount (0 to 1), mapped aggressively for MVP clarity.

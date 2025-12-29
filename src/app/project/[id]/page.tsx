@@ -71,6 +71,7 @@ const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
         fileName: demoAsset?.fileName,
         hasAudio: Boolean(demoAsset),
         isDemo: Boolean(demoAsset),
+        muted: false,
       };
     }),
     master: { volume: 0.8, pan: 0, punch: 0.5, brightness: 0.5 },
@@ -309,6 +310,23 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     applyPatchWithoutCommit(diff);
   };
 
+  const handleTrackMuteToggle = (trackIndex: number) => {
+    const nextMuted = !mixState.tracks[trackIndex]?.muted;
+    const diff: MixPatchOp[] = [
+      {
+        op: "replace",
+        path: `/tracks/${trackIndex}/muted`,
+        value: nextMuted,
+      },
+    ];
+
+    applyPatchWithCommit(
+      "user",
+      `${nextMuted ? "Mute" : "Unmute"} track ${trackIndex + 1}`,
+      diff,
+    );
+  };
+
   const handleMasterChange = (key: keyof MasterState, value: number) => {
     const diff: MixPatchOp[] = [
       {
@@ -423,7 +441,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         {mixState.tracks.map((track, index) => (
           <div className="track" key={`track-${index}`}>
             <div className="track-header">
-              <span className="track-name">Track {index + 1}</span>
+              <div className="track-title">
+                <span className="track-name">Track {index + 1}</span>
+                <button
+                  className="button secondary mute-button"
+                  type="button"
+                  onClick={() => handleTrackMuteToggle(index)}
+                  disabled={!track.hasAudio}
+                >
+                  {track.muted ? "Unmute" : "Mute"}
+                </button>
+              </div>
               <span className="value-pill">vol {formatValue(track.volume)}</span>
             </div>
             <div className="track-upload">
