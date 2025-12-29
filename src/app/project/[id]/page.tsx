@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "@/audio/engine/AudioEngine";
 import { appendCommit, createHistoryState, getVisibleCommits, redo, undo } from "@/state/history/historyStore";
 import type { Commit } from "@/state/history/types";
@@ -97,7 +97,8 @@ const buildAiPatch = (text: string, mixState: MixState): MixPatchOp[] => {
 
 const formatValue = (value: number) => value.toFixed(2);
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
+export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const initialMixState = useMemo(() => createInitialMixState(), []);
   const [mixState, setMixState] = useState<MixState>(initialMixState);
   const [historyState, setHistoryState] = useState(createHistoryState());
@@ -208,7 +209,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         <div className="track-header">
           <div>
             <div className="section-title">Project</div>
-            <div className="track-name">mixstate / {params.id}</div>
+            <div className="track-name">mixstate / {id}</div>
           </div>
           <div>
             <button className="button secondary" type="button" onClick={handleUndo} disabled={!canUndo}>
