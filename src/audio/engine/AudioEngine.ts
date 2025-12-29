@@ -160,7 +160,7 @@ export class AudioEngine {
       nodes.pan.pan.value = track.pan;
       // brightness -> spectral tilt (not implemented yet)
       // punch -> transient emphasis (not implemented yet)
-      // presence -> upper-mid focus (not implemented yet)
+      // presence -> upper-mid focus / forwardness (not implemented yet)
       // space -> shared space send (not implemented yet)
       nodes.enabled = track.hasAudio;
     });
