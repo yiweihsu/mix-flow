@@ -154,8 +154,14 @@ export class AudioEngine {
         return;
       }
 
+      // volume -> track gain
       nodes.gain.gain.value = track.volume;
+      // pan -> stereo panner
       nodes.pan.pan.value = track.pan;
+      // brightness -> spectral tilt (not implemented yet)
+      // punch -> transient emphasis (not implemented yet)
+      // presence -> upper-mid focus (not implemented yet)
+      // space -> shared space send (not implemented yet)
       nodes.enabled = track.hasAudio;
     });
   }
