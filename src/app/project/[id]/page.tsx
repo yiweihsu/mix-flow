@@ -476,10 +476,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               ["punch", 0, 1, 0.01],
               ["brightness", 0, 1, 0.01],
               ["presence", 0, 1, 0.01],
+              ["space", 0, 1, 0.01],
             ] as const).map(([key, min, max, step]) => (
               <div className="slider-row" key={`${index}-${key}`}>
                 <label htmlFor={`track-${index}-${key}`}>
-                  {key === "presence" ? "PRESENCE" : key}
+                  {key === "presence" ? "PRESENCE" : key === "space" ? "SPACE" : key}
                 </label>
                 <input
                   id={`track-${index}-${key}`}
