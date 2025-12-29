@@ -26,6 +26,15 @@ const DEMO_ASSETS: DemoAsset[] = [
   { fileName: "demo-bed.mp3", url: "/demo-audio/demo-bed.mp3" },
   { fileName: "demo-voice.mp3", url: "/demo-audio/demo-voice.mp3" },
 ];
+const TIMELINE_MARKS = [0, 5, 10, 15];
+const TIMELINE_DURATION = 15;
+
+type TransportState = {
+  playing: boolean;
+  paused: boolean;
+  currentTime: number;
+  duration: number;
+};
 
 const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
   const baseTracks = [
@@ -36,6 +45,7 @@ const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
       brightness: 0.5,
       presence: 0.5,
       space: 0,
+      startOffset: 0,
     },
     {
       volume: 0.55,
@@ -44,6 +54,7 @@ const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
       brightness: 0.6,
       presence: 0.5,
       space: 0,
+      startOffset: 0,
     },
     {
       volume: 0.5,
@@ -52,6 +63,7 @@ const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
       brightness: 0.4,
       presence: 0.5,
       space: 0,
+      startOffset: 0,
     },
     {
       volume: 0.65,
@@ -60,6 +72,7 @@ const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
       brightness: 0.7,
       presence: 0.5,
       space: 0,
+      startOffset: 0,
     },
   ];
 
@@ -157,6 +170,12 @@ const buildAiPatch = (text: string, mixState: MixState): MixPatchOp[] => {
 };
 
 const formatValue = (value: number) => value.toFixed(2);
+const formatSeconds = (value: number) => `${value.toFixed(1)}s`;
+const formatTransportTime = (value: number) => {
+  const minutes = Math.floor(value / 60);
+  const seconds = value % 60;
+  return `${String(minutes).padStart(2, "0")}:${seconds.toFixed(2).padStart(5, "0")}`;
+};
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -168,10 +187,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [mixState, setMixState] = useState<MixState>(initialMixState);
   const [historyState, setHistoryState] = useState(createHistoryState());
   const [prompt, setPrompt] = useState("");
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [transport, setTransport] = useState<TransportState>({
+    playing: false,
+    paused: false,
+    currentTime: 0,
+    duration: TIMELINE_DURATION,
+  });
   const engineRef = useRef<AudioEngine | null>(null);
   const mixStateRef = useRef(mixState);
   const sliderDragStartRef = useRef<Record<string, number>>({});
+  const playStartTimeRef = useRef(0);
+  const playStartTimestampRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
   const canUndo = historyState.cursor >= 0;
   const canRedo = historyState.cursor < historyState.commits.length - 1;
   const hasPlayableAudio = mixState.tracks.some((track) => track.hasAudio);
@@ -181,7 +208,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     engine.init(initialMixState.tracks);
     engine.update(initialMixState);
     engineRef.current = engine;
-    setIsPlaying(false);
+    setTransport((prev) => ({ ...prev, playing: false, paused: false, currentTime: 0 }));
 
     return () => engine.dispose();
   }, [initialMixState]);
@@ -298,6 +325,33 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     );
   };
 
+  const endStartOffsetDrag = (key: string, trackIndex: number, path: string, to: number) => {
+    const from = sliderDragStartRef.current[key];
+    delete sliderDragStartRef.current[key];
+
+    if (from === undefined || from === to) {
+      return;
+    }
+
+    commit(
+      "user",
+      `Move track ${trackIndex + 1} start (${formatSeconds(from)} → ${formatSeconds(to)})`,
+      [
+        {
+          op: "replace",
+          path,
+          value: to,
+        },
+      ],
+      {
+        intent: "start-offset",
+        path,
+        from,
+        to,
+      },
+    );
+  };
+
   const handleTrackChange = (trackIndex: number, key: keyof TrackState, value: number) => {
     const diff: MixPatchOp[] = [
       {
@@ -373,13 +427,28 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   const handlePlay = () => {
-    engineRef.current?.play();
-    setIsPlaying(engineRef.current?.isPlaying ?? false);
+    if (transport.playing) {
+      return;
+    }
+    const engine = engineRef.current;
+    engine?.play();
+    playStartTimeRef.current = transport.currentTime;
+    playStartTimestampRef.current = performance.now();
+    setTransport((prev) => ({ ...prev, playing: true, paused: false }));
+  };
+
+  const handlePause = () => {
+    engineRef.current?.stop();
+    setTransport((prev) => ({ ...prev, playing: false, paused: true }));
+    playStartTimeRef.current = transport.currentTime;
+    playStartTimestampRef.current = null;
   };
 
   const handleStop = () => {
     engineRef.current?.stop();
-    setIsPlaying(false);
+    setTransport((prev) => ({ ...prev, playing: false, paused: false, currentTime: 0 }));
+    playStartTimeRef.current = 0;
+    playStartTimestampRef.current = null;
   };
 
   const handleUndo = () => {
@@ -405,13 +474,51 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      const nextPlaying = engineRef.current?.isPlaying ?? false;
-      setIsPlaying((prev) => (prev === nextPlaying ? prev : nextPlaying));
-    }, 200);
+    if (!transport.playing) {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      return;
+    }
 
-    return () => window.clearInterval(interval);
-  }, []);
+    const tick = () => {
+      const startTimestamp = playStartTimestampRef.current ?? performance.now();
+      if (playStartTimestampRef.current === null) {
+        playStartTimestampRef.current = startTimestamp;
+      }
+      const elapsed = (performance.now() - startTimestamp) / 1000;
+      const nextTime = clamp(playStartTimeRef.current + elapsed, 0, transport.duration);
+      setTransport((prev) => {
+        if (!prev.playing) {
+          return prev;
+        }
+        const clampedTime = clamp(playStartTimeRef.current + elapsed, 0, prev.duration);
+        if (prev.duration > 0 && clampedTime >= prev.duration) {
+          engineRef.current?.stop();
+          playStartTimestampRef.current = null;
+          playStartTimeRef.current = 0;
+          return { ...prev, currentTime: prev.duration, playing: false, paused: false };
+        }
+        if (Math.abs(prev.currentTime - clampedTime) < 0.001) {
+          return prev;
+        }
+        return { ...prev, currentTime: clampedTime };
+      });
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [transport.playing, transport.duration]);
+
+  const playheadPercent = clamp((transport.currentTime / transport.duration) * 100, 0, 100);
 
   return (
     <main className="app-shell">
@@ -422,10 +529,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="track-name">mixstate / {id}</div>
           </div>
           <div className="transport-controls">
-            <button className="button" type="button" onClick={handlePlay} disabled={!hasPlayableAudio || isPlaying}>
-              Play
+            <button
+              className="button"
+              type="button"
+              onClick={transport.playing ? handlePause : handlePlay}
+              disabled={!hasPlayableAudio}
+            >
+              {transport.playing ? "Pause" : "Play"}
             </button>{" "}
-            <button className="button secondary" type="button" onClick={handleStop} disabled={!isPlaying}>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={handleStop}
+              disabled={!transport.playing && !transport.paused}
+            >
               Stop
             </button>{" "}
             <button className="button secondary" type="button" onClick={handleUndo} disabled={!canUndo}>
@@ -434,7 +551,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <button className="button secondary" type="button" onClick={handleRedo} disabled={!canRedo}>
               Redo
             </button>
+            <div className="transport-time">Time: {formatTransportTime(transport.currentTime)}</div>
           </div>
+        </div>
+
+        <div className="timeline">
+          <div className="timeline-ruler">
+            {TIMELINE_MARKS.map((mark) => (
+              <div className="timeline-mark" key={`timeline-${mark}`}>
+                {mark}s
+              </div>
+            ))}
+          </div>
+          <div className="timeline-playhead" style={{ left: `${playheadPercent}%` }} />
         </div>
 
         <div className="section-title">Tracks</div>
@@ -468,6 +597,45 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 {track.isDemo && <span className="demo-badge">Demo audio loaded</span>}
                 <span className="file-name">{track.fileName ?? "No file loaded"}</span>
               </div>
+            </div>
+
+            <div className="slider-row">
+              <label htmlFor={`track-${index}-start`}>Start</label>
+              <input
+                id={`track-${index}-start`}
+                type="range"
+                min={0}
+                max={30}
+                step={0.1}
+                value={track.startOffset}
+                disabled={!track.hasAudio}
+                onPointerDown={() => beginSliderDrag(`track-${index}-start`, track.startOffset)}
+                onMouseDown={() => beginSliderDrag(`track-${index}-start`, track.startOffset)}
+                onChange={(event) =>
+                  handleTrackChange(
+                    index,
+                    "startOffset",
+                    Number(event.target.value),
+                  )
+                }
+                onPointerUp={(event) =>
+                  endStartOffsetDrag(
+                    `track-${index}-start`,
+                    index,
+                    `/tracks/${index}/startOffset`,
+                    Number(event.currentTarget.value),
+                  )
+                }
+                onMouseUp={(event) =>
+                  endStartOffsetDrag(
+                    `track-${index}-start`,
+                    index,
+                    `/tracks/${index}/startOffset`,
+                    Number(event.currentTarget.value),
+                  )
+                }
+              />
+              <span className="value-pill">{formatSeconds(track.startOffset)}</span>
             </div>
 
             {([
