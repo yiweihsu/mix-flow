@@ -87,8 +87,9 @@ export class AudioEngine {
       presence.connect(compressor);
       compressor.connect(gain);
       gain.connect(pan);
+      // Reverb send is pre-pan so space reads as a true shared environment.
+      gain.connect(reverbSend);
       pan.connect(masterGain);
-      pan.connect(reverbSend);
       reverbSend.connect(reverb);
 
       return {
@@ -236,8 +237,8 @@ export class AudioEngine {
       nodes.gain.gain.value = Math.pow(track.volume, 2);
       // pan -> stereo panner (-1 to 1)
       nodes.pan.pan.value = track.pan;
-      // space -> reverb send amount (0 to 1)
-      nodes.reverbSend.gain.value = track.space;
+      // space -> reverb send amount (0 to 1), mapped aggressively for MVP clarity.
+      nodes.reverbSend.gain.value = track.space * 0.8;
       nodes.enabled = track.hasAudio;
     });
   }
