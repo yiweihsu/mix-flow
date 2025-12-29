@@ -383,7 +383,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   handleAudioUpload(index, event.target.files?.[0] ?? null)
                 }
               />
-              <span className="file-name">{track.fileName ?? "No file loaded"}</span>
+              <div className="file-meta">
+                {track.isDemo && <span className="demo-badge">Demo audio loaded</span>}
+                <span className="file-name">{track.fileName ?? "No file loaded"}</span>
+              </div>
             </div>
 
             {([
