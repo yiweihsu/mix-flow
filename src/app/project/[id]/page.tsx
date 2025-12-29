@@ -3,6 +3,7 @@
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "@/audio/engine/AudioEngine";
 import type { MacroParameters } from "@/state/mix/types";
+import { DEFAULT_PRESET, GOLDEN_PRESETS } from "@/state/mix/presets";
 
 type SliderDefinition = {
   key: keyof MacroParameters;
@@ -12,19 +13,8 @@ type SliderDefinition = {
 
 const DEMO_VOICE_URL = "/demo-audio/demo-voice.mp3";
 
-const DEFAULT_PARAMS: MacroParameters = {
-  drive: 0.01,
-  punch: 0.45,
-  body: 0.5,
-  presence: 0.5,
-  air: 0.45,
-  space: 0.3,
-  width: 0.4,
-  motion: 0.25,
-  density: 0.5,
-  character: 0.5,
-};
-const DEFAULT_OUTPUT_VOLUME = 0.8;
+const DEFAULT_PARAMS: MacroParameters = DEFAULT_PRESET.params;
+const DEFAULT_OUTPUT_VOLUME = DEFAULT_PRESET.masterOutput;
 
 const SLIDERS: SliderDefinition[] = [
   { key: "drive", label: "Drive", description: "Harmonic energy + saturation." },
@@ -98,6 +88,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const engineRef = useRef<AudioEngine | null>(null);
   const [paramsState, setParamsState] = useState<MacroParameters>(DEFAULT_PARAMS);
   const [outputVolume, setOutputVolume] = useState(DEFAULT_OUTPUT_VOLUME);
+  const [selectedPresetName, setSelectedPresetName] = useState(DEFAULT_PRESET.name);
+  const [historyEntries, setHistoryEntries] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -168,6 +160,23 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const updateOutputVolume = (value: number) => {
     setOutputVolume(value);
     engineRef.current?.update(paramsState, value);
+  };
+
+  const applyPreset = (presetName: string) => {
+    const preset = GOLDEN_PRESETS.find((item) => item.name === presetName);
+    if (!preset) {
+      return;
+    }
+    const nextParams = { ...preset.params };
+    const nextOutput = preset.masterOutput;
+    setSelectedPresetName(preset.name);
+    setParamsState(nextParams);
+    setOutputVolume(nextOutput);
+    engineRef.current?.update(nextParams, nextOutput);
+    setHistoryEntries((prev) => {
+      const next = [`Apply preset: ${preset.name}`, ...prev];
+      return next.slice(0, 6);
+    });
   };
 
   const handleTransportToggle = () => {
@@ -269,6 +278,41 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             value={outputVolume}
             onChange={(event) => updateOutputVolume(Number(event.target.value))}
           />
+        </div>
+
+        <div className="preset-panel">
+          <div className="preset-header">
+            <div>
+              <span className="preset-label">Golden Presets</span>
+              <span className="preset-description">
+                Curated vocal starting points for the instrument.
+              </span>
+            </div>
+            <span className="preset-value">{selectedPresetName}</span>
+          </div>
+          <div className="preset-controls">
+            <select
+              className="preset-select"
+              value={selectedPresetName}
+              onChange={(event) => applyPreset(event.target.value)}
+            >
+              {GOLDEN_PRESETS.map((preset) => (
+                <option key={preset.name} value={preset.name}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+            <span className="preset-note">
+              {GOLDEN_PRESETS.find((preset) => preset.name === selectedPresetName)
+                ?.description ?? ""}
+            </span>
+          </div>
+          <div className="preset-history">
+            <span className="preset-history-label">History</span>
+            <span className="preset-history-entry">
+              {historyEntries[0] ?? "No preset changes yet."}
+            </span>
+          </div>
         </div>
 
         <div className="slider-grid">

@@ -180,6 +180,90 @@ main {
   font-size: 0.85rem;
 }
 
+.preset-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(27, 26, 23, 0.12);
+  padding: 16px 18px;
+  background: #f6efe4;
+  display: grid;
+  gap: 12px;
+}
+
+.preset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.preset-label {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.7rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.preset-description {
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: block;
+}
+
+.preset-value {
+  font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  background: rgba(27, 26, 23, 0.08);
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.preset-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.preset-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(27, 26, 23, 0.2);
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.preset-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.preset-history {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  background: rgba(27, 26, 23, 0.05);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.preset-history-label {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.preset-history-entry {
+  font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+
 .button {
   display: inline-flex;
   align-items: center;

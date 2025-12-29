@@ -11,6 +11,12 @@ sound like an instrument.
 - Macro sliders control multiple DSP parameters under the hood.
 - Export renders the processed voice as a single file.
 
+## Golden Presets
+
+Golden Presets represent curated starting points that demonstrate the intended
+musical character of Vocal Playground. They are not final mixes; use them as a
+foundation and adjust to fit the voice and track.
+
 ## MVP Notes
 
 - No accounts.
