@@ -478,49 +478,56 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               ["presence", 0, 1, 0.01],
               ["space", 0, 1, 0.01],
             ] as const).map(([key, min, max, step]) => (
-              <div className="slider-row" key={`${index}-${key}`}>
-                <label htmlFor={`track-${index}-${key}`}>
-                  {key === "presence" ? "PRESENCE" : key === "space" ? "SPACE" : key}
-                </label>
-                <input
-                  id={`track-${index}-${key}`}
-                  type="range"
-                  min={min}
-                  max={max}
-                  step={step}
-                  value={track[key]}
-                  disabled={!track.hasAudio}
-                  onPointerDown={() => beginSliderDrag(`track-${index}-${key}`, track[key])}
-                  onMouseDown={() => beginSliderDrag(`track-${index}-${key}`, track[key])}
-                  onChange={(event) =>
-                    handleTrackChange(
-                      index,
-                      key,
-                      Number(event.target.value),
-                    )
-                  }
-                  onPointerUp={(event) =>
-                    endSliderDrag(
-                      `track-${index}-${key}`,
-                      "user",
-                      `track ${index + 1}`,
-                      key,
-                      `/tracks/${index}/${key}`,
-                      Number(event.currentTarget.value),
-                    )
-                  }
-                  onMouseUp={(event) =>
-                    endSliderDrag(
-                      `track-${index}-${key}`,
-                      "user",
-                      `track ${index + 1}`,
-                      key,
-                      `/tracks/${index}/${key}`,
-                      Number(event.currentTarget.value),
-                    )
-                  }
-                />
-                <span className="value-pill">{formatValue(track[key])}</span>
+              <div key={`${index}-${key}`}>
+                <div className="slider-row">
+                  <label htmlFor={`track-${index}-${key}`}>
+                    {key === "presence" ? "PRESENCE" : key === "space" ? "SPACE" : key}
+                  </label>
+                  <input
+                    id={`track-${index}-${key}`}
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={track[key]}
+                    disabled={!track.hasAudio}
+                    onPointerDown={() => beginSliderDrag(`track-${index}-${key}`, track[key])}
+                    onMouseDown={() => beginSliderDrag(`track-${index}-${key}`, track[key])}
+                    onChange={(event) =>
+                      handleTrackChange(
+                        index,
+                        key,
+                        Number(event.target.value),
+                      )
+                    }
+                    onPointerUp={(event) =>
+                      endSliderDrag(
+                        `track-${index}-${key}`,
+                        "user",
+                        `track ${index + 1}`,
+                        key,
+                        `/tracks/${index}/${key}`,
+                        Number(event.currentTarget.value),
+                      )
+                    }
+                    onMouseUp={(event) =>
+                      endSliderDrag(
+                        `track-${index}-${key}`,
+                        "user",
+                        `track ${index + 1}`,
+                        key,
+                        `/tracks/${index}/${key}`,
+                        Number(event.currentTarget.value),
+                      )
+                    }
+                  />
+                  <span className="value-pill">{formatValue(track[key])}</span>
+                </div>
+                {key === "space" ? (
+                  <div style={{ margin: "4px 0 10px", fontSize: "0.75rem", color: "var(--muted)" }}>
+                    Controls distance / reverb send
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
