@@ -105,9 +105,24 @@ main {
   font-size: 0.85rem;
   color: var(--muted);
   align-self: center;
-  width: 72px;
-  text-align: right;
+  width: 140px;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: var(--font-geist-mono), "Courier New", monospace;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.transport-time-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+.transport-time-value {
+  min-width: 70px;
+  text-align: right;
 }
 
 .timeline {

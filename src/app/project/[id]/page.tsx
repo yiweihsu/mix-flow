@@ -636,7 +636,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <button className="button secondary" type="button" onClick={handleRedo} disabled={!canRedo}>
               Redo
             </button>
-            <div className="transport-time">Time: {formatTransportTime(transport.currentTime)}</div>
+            <div className="transport-time">
+              <span className="transport-time-label">Time</span>
+              <span className="transport-time-value">
+                {formatTransportTime(transport.currentTime)}
+              </span>
+            </div>
           </div>
         </div>
 
