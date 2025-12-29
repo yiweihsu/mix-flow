@@ -213,12 +213,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               <span className="meta-value">{id}</span>
             </div>
             <div>
-              <span className="meta-label">Playback</span>
-              <span className="meta-value playback-time">
-                {formatTime(playbackTime)} / {formatTime(duration)}
-              </span>
-            </div>
-            <div>
               <span className="meta-label">Source</span>
               <span className="meta-value">Demo voice loaded</span>
             </div>
@@ -226,22 +220,30 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         </header>
 
         <div className="transport-bar">
-          <button
-            className="button"
-            type="button"
-            onClick={handleTransportToggle}
-            disabled={!isReady}
-          >
-            {isPlaying ? "Pause" : "Play"}
-          </button>
-          <button
-            className="button secondary"
-            type="button"
-            onClick={handleExport}
-            disabled={!isReady || isExporting}
-          >
-            {isExporting ? "Rendering..." : "Export Rendered Audio"}
-          </button>
+          <div className="transport-spacer" />
+          <div className="transport-buttons">
+            <button
+              className="button"
+              type="button"
+              onClick={handleTransportToggle}
+              disabled={!isReady}
+            >
+              {isPlaying ? "Pause" : "Play"}
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={handleExport}
+              disabled={!isReady || isExporting}
+            >
+              {isExporting ? "Rendering..." : "Export Rendered Audio"}
+            </button>
+          </div>
+          <div className="transport-time">
+            <span className="playback-time">
+              {formatTime(playbackTime)} / {formatTime(duration)}
+            </span>
+          </div>
         </div>
 
         <div className="slider-grid">

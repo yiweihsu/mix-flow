@@ -120,9 +120,23 @@ main {
 }
 
 .transport-bar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 12px;
+}
+
+.transport-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.transport-time {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .button {
