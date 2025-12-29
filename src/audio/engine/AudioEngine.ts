@@ -7,6 +7,7 @@ type TrackNodes = {
   gain: GainNode;
   pan: StereoPannerNode;
   reverbSend: GainNode;
+  reverbFilter: BiquadFilterNode;
   source: AudioBufferSourceNode | null;
   buffer: AudioBuffer | null;
   enabled: boolean;
@@ -93,6 +94,9 @@ export class AudioEngine {
       const pan = context.createStereoPanner();
       const reverbSend = context.createGain();
       reverbSend.gain.value = 0;
+      const reverbFilter = context.createBiquadFilter();
+      reverbFilter.type = "lowpass";
+      reverbFilter.frequency.value = 6000;
 
       brightness.connect(presence);
       presence.connect(compressor);
@@ -101,7 +105,8 @@ export class AudioEngine {
       // Reverb send is pre-pan so space reads as a true shared environment.
       gain.connect(reverbSend);
       pan.connect(masterGain);
-      reverbSend.connect(reverb);
+      reverbSend.connect(reverbFilter);
+      reverbFilter.connect(reverb);
 
       return {
         brightness,
@@ -110,6 +115,7 @@ export class AudioEngine {
         gain,
         pan,
         reverbSend,
+        reverbFilter,
         source: null,
         buffer: null,
         enabled: track.hasAudio,
@@ -252,7 +258,8 @@ export class AudioEngine {
       // pan -> stereo panner (-1 to 1)
       nodes.pan.pan.value = track.pan;
       // space -> reverb send amount (0 to 1), mapped aggressively for MVP clarity.
-      nodes.reverbSend.gain.value = track.space * 0.8;
+      const clampedSpace = Math.min(1, Math.max(0, track.space));
+      nodes.reverbSend.gain.value = track.hasAudio ? clampedSpace ** 2 * 0.8 : 0;
       nodes.enabled = track.hasAudio;
     });
   }
@@ -266,6 +273,7 @@ export class AudioEngine {
       track.gain.disconnect();
       track.pan.disconnect();
       track.reverbSend.disconnect();
+      track.reverbFilter.disconnect();
     });
 
     this.tracks = [];
