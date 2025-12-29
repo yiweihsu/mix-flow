@@ -103,15 +103,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [mixState, setMixState] = useState<MixState>(initialMixState);
   const [historyState, setHistoryState] = useState(createHistoryState());
   const [prompt, setPrompt] = useState("");
+  const [isPlaying, setIsPlaying] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
   const canUndo = historyState.cursor >= 0;
   const canRedo = historyState.cursor < historyState.commits.length - 1;
+  const hasPlayableAudio = mixState.tracks.some((track) => track.hasAudio);
 
   useEffect(() => {
     const engine = new AudioEngine();
     engine.init(initialMixState.tracks);
     engine.update(initialMixState);
     engineRef.current = engine;
+    setIsPlaying(false);
 
     return () => engine.dispose();
   }, [initialMixState]);
@@ -135,7 +138,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   const applyPatchWithCommit = (author: Commit["author"], message: string, diff: MixPatchOp[]) => {
-    engineRef.current?.resume();
     setMixState((prev) => applyPatch(prev, diff));
     commit(author, message, diff);
   };
@@ -179,8 +181,39 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     setPrompt("");
   };
 
+  const handleAudioUpload = async (trackIndex: number, file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = await engine.decodeAudioData(arrayBuffer);
+    engine.setTrackBuffer(trackIndex, buffer);
+
+    const diff: MixPatchOp[] = [
+      { op: "replace", path: `/tracks/${trackIndex}/fileName`, value: file.name },
+      { op: "replace", path: `/tracks/${trackIndex}/hasAudio`, value: true },
+    ];
+
+    applyPatchWithCommit("user", `Load audio into Track ${trackIndex + 1}`, diff);
+  };
+
+  const handlePlay = () => {
+    engineRef.current?.play();
+    setIsPlaying(engineRef.current?.isPlaying ?? false);
+  };
+
+  const handleStop = () => {
+    engineRef.current?.stop();
+    setIsPlaying(false);
+  };
+
   const handleUndo = () => {
-    engineRef.current?.resume();
     const nextHistory = undo(historyState);
     setHistoryState(nextHistory);
     setMixState(
@@ -192,7 +225,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   const handleRedo = () => {
-    engineRef.current?.resume();
     const nextHistory = redo(historyState);
     setHistoryState(nextHistory);
     setMixState(
@@ -203,6 +235,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     );
   };
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const nextPlaying = engineRef.current?.isPlaying ?? false;
+      setIsPlaying((prev) => (prev === nextPlaying ? prev : nextPlaying));
+    }, 200);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   return (
     <main className="app-shell">
       <section className="card">
@@ -211,7 +252,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="section-title">Project</div>
             <div className="track-name">mixstate / {id}</div>
           </div>
-          <div>
+          <div className="transport-controls">
+            <button className="button" type="button" onClick={handlePlay} disabled={!hasPlayableAudio || isPlaying}>
+              Play
+            </button>{" "}
+            <button className="button secondary" type="button" onClick={handleStop} disabled={!isPlaying}>
+              Stop
+            </button>{" "}
             <button className="button secondary" type="button" onClick={handleUndo} disabled={!canUndo}>
               Undo
             </button>{" "}
@@ -227,6 +274,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="track-header">
               <span className="track-name">Track {index + 1}</span>
               <span className="value-pill">vol {formatValue(track.volume)}</span>
+            </div>
+            <div className="track-upload">
+              <label htmlFor={`track-${index}-upload`}>Upload audio</label>
+              <input
+                id={`track-${index}-upload`}
+                type="file"
+                accept="audio/*"
+                onChange={(event) =>
+                  handleAudioUpload(index, event.target.files?.[0] ?? null)
+                }
+              />
+              <span className="file-name">{track.fileName ?? "No file loaded"}</span>
             </div>
 
             {([
@@ -244,6 +303,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   max={max}
                   step={step}
                   value={track[key]}
+                  disabled={!track.hasAudio}
                   onChange={(event) =>
                     handleTrackChange(
                       index,

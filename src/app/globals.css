@@ -83,9 +83,34 @@ main {
   margin-bottom: 12px;
 }
 
+.transport-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .track-name {
   font-weight: 600;
   font-size: 1.05rem;
+}
+
+.track-upload {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.track-upload input[type="file"] {
+  width: 100%;
+}
+
+.file-name {
+  grid-column: 2 / -1;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .slider-row {
