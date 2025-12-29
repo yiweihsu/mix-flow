@@ -106,12 +106,19 @@ main {
   font-weight: 600;
 }
 
+.playback-time-box {
+  display: inline-flex;
+  align-items: center;
+  width: 19ch;
+  white-space: nowrap;
+}
+
 .playback-time {
   display: inline-block;
-  width: 20ch;
-  text-align: center;
   font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
   font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -133,13 +140,6 @@ main {
   gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-.transport-time {
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
 }
 
 .upload-panel {

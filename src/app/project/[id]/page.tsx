@@ -262,6 +262,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               <span className="meta-label">Source</span>
               <span className="meta-value">{sourceStatus}</span>
             </div>
+            <div>
+              <span className="meta-label">Playback</span>
+              <span className="playback-time-box">
+                <span className="playback-time">
+                  {formatTime(playbackTime)} / {formatTime(duration)}
+                </span>
+              </span>
+            </div>
           </div>
         </header>
 
@@ -307,11 +315,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               >
                 {isExporting ? "Rendering..." : "Export Rendered Audio"}
               </button>
-            </div>
-            <div className="transport-time">
-              <span className="playback-time">
-                {formatTime(playbackTime)} / {formatTime(duration)}
-              </span>
             </div>
             <div className="preset-strip">
               <div className="preset-pills">
