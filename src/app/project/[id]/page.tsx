@@ -2,7 +2,14 @@
 
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "@/audio/engine/AudioEngine";
-import { appendCommit, createHistoryState, getVisibleCommits, redo, undo } from "@/state/history/historyStore";
+import {
+  appendCommit,
+  buildSliderCommitMessage,
+  createHistoryState,
+  getVisibleCommits,
+  redo,
+  undo,
+} from "@/state/history/historyStore";
 import type { Commit } from "@/state/history/types";
 import { applyPatch } from "@/state/mix/reducer";
 import type { MasterState, MixPatchOp, MixState, TrackState } from "@/state/mix/types";
@@ -163,6 +170,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [isPlaying, setIsPlaying] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
   const mixStateRef = useRef(mixState);
+  const sliderDragStartRef = useRef<Record<string, number>>({});
   const canUndo = historyState.cursor >= 0;
   const canRedo = historyState.cursor < historyState.commits.length - 1;
   const hasPlayableAudio = mixState.tracks.some((track) => track.hasAudio);
@@ -222,13 +230,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const commits = getVisibleCommits(historyState);
 
-  const commit = (author: Commit["author"], message: string, diff: MixPatchOp[]) => {
+  const commit = (
+    author: Commit["author"],
+    message: string,
+    diff: MixPatchOp[],
+    meta?: Commit["meta"],
+  ) => {
     const newCommit: Commit = {
       id: crypto.randomUUID(),
       author,
       message,
       diff,
       timestamp: Date.now(),
+      meta,
     };
 
     setHistoryState((prev) => appendCommit(prev, newCommit));
@@ -239,12 +253,51 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     commit(author, message, diff);
   };
 
-  const handleTrackChange = (
-    trackIndex: number,
-    key: keyof TrackState,
-    value: number,
+  const applyPatchWithoutCommit = (diff: MixPatchOp[]) => {
+    setMixState((prev) => applyPatch(prev, diff));
+  };
+
+  const beginSliderDrag = (key: string, value: number) => {
+    sliderDragStartRef.current[key] = value;
+  };
+
+  const endSliderDrag = (
+    key: string,
     author: Commit["author"],
+    targetLabel: string,
+    paramLabel: string,
+    path: string,
+    to: number,
   ) => {
+    const from = sliderDragStartRef.current[key];
+    delete sliderDragStartRef.current[key];
+
+    if (from === undefined || from === to) {
+      return;
+    }
+
+    commit(
+      author,
+      buildSliderCommitMessage(targetLabel, paramLabel, from, to),
+      [
+        {
+          op: "replace",
+          path,
+          value: to,
+        },
+      ],
+      {
+        intent: "slider-adjust",
+        path,
+        from,
+        to,
+        targetLabel,
+        paramLabel,
+      },
+    );
+  };
+
+  const handleTrackChange = (trackIndex: number, key: keyof TrackState, value: number) => {
     const diff: MixPatchOp[] = [
       {
         op: "replace",
@@ -253,7 +306,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       },
     ];
 
-    applyPatchWithCommit(author, `Set track ${trackIndex + 1} ${key}`, diff);
+    applyPatchWithoutCommit(diff);
   };
 
   const handleMasterChange = (key: keyof MasterState, value: number) => {
@@ -265,7 +318,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       },
     ];
 
-    applyPatchWithCommit("user", `Set master ${key}`, diff);
+    applyPatchWithoutCommit(diff);
   };
 
   const handleAiSubmit = () => {
@@ -408,12 +461,33 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   step={step}
                   value={track[key]}
                   disabled={!track.hasAudio}
+                  onPointerDown={() => beginSliderDrag(`track-${index}-${key}`, track[key])}
+                  onMouseDown={() => beginSliderDrag(`track-${index}-${key}`, track[key])}
                   onChange={(event) =>
                     handleTrackChange(
                       index,
                       key,
                       Number(event.target.value),
+                    )
+                  }
+                  onPointerUp={(event) =>
+                    endSliderDrag(
+                      `track-${index}-${key}`,
                       "user",
+                      `track ${index + 1}`,
+                      key,
+                      `/tracks/${index}/${key}`,
+                      Number(event.currentTarget.value),
+                    )
+                  }
+                  onMouseUp={(event) =>
+                    endSliderDrag(
+                      `track-${index}-${key}`,
+                      "user",
+                      `track ${index + 1}`,
+                      key,
+                      `/tracks/${index}/${key}`,
+                      Number(event.currentTarget.value),
                     )
                   }
                 />
@@ -440,7 +514,29 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 max={max}
                 step={step}
                 value={mixState.master[key]}
+                onPointerDown={() => beginSliderDrag(`master-${key}`, mixState.master[key])}
+                onMouseDown={() => beginSliderDrag(`master-${key}`, mixState.master[key])}
                 onChange={(event) => handleMasterChange(key, Number(event.target.value))}
+                onPointerUp={(event) =>
+                  endSliderDrag(
+                    `master-${key}`,
+                    "user",
+                    "master",
+                    key,
+                    `/master/${key}`,
+                    Number(event.currentTarget.value),
+                  )
+                }
+                onMouseUp={(event) =>
+                  endSliderDrag(
+                    `master-${key}`,
+                    "user",
+                    "master",
+                    key,
+                    `/master/${key}`,
+                    Number(event.currentTarget.value),
+                  )
+                }
               />
               <span className="value-pill">{formatValue(mixState.master[key])}</span>
             </div>
