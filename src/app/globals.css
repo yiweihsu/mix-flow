@@ -1,13 +1,18 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f0e6;
+  --panel: #ffffff;
+  --accent: #1d5b4f;
+  --accent-soft: #e3f3ef;
+  --foreground: #1b1b1b;
+  --muted: #6b6b6b;
+  --border: #d9d1c6;
+  --shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -18,16 +23,11 @@ body {
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at top, #fbf7f0 0%, #f5f0e6 55%, #efe7d9 100%);
+  font-family: var(--font-geist-sans), "Trebuchet MS", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  min-height: 100vh;
 }
 
 a {
@@ -35,8 +35,177 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+main {
+  display: block;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 32px;
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    grid-template-columns: 1fr;
   }
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.track {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fffaf1;
+}
+
+.track-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.track-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 64px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.slider-row label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.slider-row input[type="range"] {
+  width: 100%;
+}
+
+.value-pill {
+  font-size: 0.85rem;
+  text-align: right;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.ai-panel textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-family: var(--font-geist-mono), "Courier New", monospace;
+  margin-bottom: 12px;
+  background: #fffdf8;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.commit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.commit-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #ffffff;
+  font-size: 0.9rem;
+}
+
+.commit-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 48px;
+}
+
+.hero-card {
+  max-width: 640px;
+  text-align: center;
+  display: grid;
+  gap: 20px;
+}
+
+.hero-card h1 {
+  font-size: 2.5rem;
+}
+
+.hero-card p {
+  color: var(--muted);
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.footer-note {
+  font-size: 0.8rem;
+  color: var(--muted);
 }
