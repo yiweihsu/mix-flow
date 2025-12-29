@@ -26,9 +26,6 @@ const DEMO_ASSETS: DemoAsset[] = [
   { fileName: "demo-bed.mp3", url: "/demo-audio/demo-bed.mp3" },
   { fileName: "demo-voice.mp3", url: "/demo-audio/demo-voice.mp3" },
 ];
-const TIMELINE_MARKS = [0, 5, 10, 15];
-const TIMELINE_DURATION = 15;
-
 type TransportState = {
   playing: boolean;
   paused: boolean;
@@ -185,13 +182,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     [isDemoProject],
   );
   const [mixState, setMixState] = useState<MixState>(initialMixState);
+  const [trackDurations, setTrackDurations] = useState<number[]>(
+    () => initialMixState.tracks.map(() => 0),
+  );
   const [historyState, setHistoryState] = useState(createHistoryState());
   const [prompt, setPrompt] = useState("");
   const [transport, setTransport] = useState<TransportState>({
     playing: false,
     paused: false,
     currentTime: 0,
-    duration: TIMELINE_DURATION,
+    duration: 0,
   });
   const engineRef = useRef<AudioEngine | null>(null);
   const mixStateRef = useRef(mixState);
@@ -202,6 +202,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const canUndo = historyState.cursor >= 0;
   const canRedo = historyState.cursor < historyState.commits.length - 1;
   const hasPlayableAudio = mixState.tracks.some((track) => track.hasAudio);
+  const canPlay = hasPlayableAudio && transport.duration > 0;
+  const projectDuration = useMemo(() => {
+    return mixState.tracks.reduce((maxDuration, track, index) => {
+      if (!track.hasAudio) {
+        return maxDuration;
+      }
+      const clipDuration = trackDurations[index] ?? 0;
+      if (clipDuration <= 0) {
+        return maxDuration;
+      }
+      const endTime = track.startOffset + clipDuration;
+      return Math.max(maxDuration, endTime);
+    }, 0);
+  }, [mixState.tracks, trackDurations]);
 
   useEffect(() => {
     const engine = new AudioEngine();
@@ -238,6 +252,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               return;
             }
             engine.setTrackBuffer(index, buffer);
+            setTrackDurations((prev) => {
+              const next = [...prev];
+              next[index] = buffer.duration;
+              return next;
+            });
           } catch (error) {
             console.error(`Failed to load demo audio (${asset.fileName})`, error);
           }
@@ -255,6 +274,50 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     engineRef.current?.update(mixState);
   }, [mixState]);
+
+  useEffect(() => {
+    if (projectDuration <= 0) {
+      engineRef.current?.stop();
+      playStartTimeRef.current = 0;
+      playStartTimestampRef.current = null;
+    }
+
+    setTransport((prev) => {
+      const nextDuration = projectDuration;
+      let nextCurrentTime = prev.currentTime;
+      let nextPlaying = prev.playing;
+      let nextPaused = prev.paused;
+
+      if (nextDuration <= 0) {
+        nextCurrentTime = 0;
+        nextPlaying = false;
+        nextPaused = false;
+      } else if (nextCurrentTime > nextDuration) {
+        nextCurrentTime = nextDuration;
+        if (prev.playing) {
+          playStartTimeRef.current = nextCurrentTime;
+          playStartTimestampRef.current = performance.now();
+        }
+      }
+
+      if (
+        nextDuration === prev.duration &&
+        nextCurrentTime === prev.currentTime &&
+        nextPlaying === prev.playing &&
+        nextPaused === prev.paused
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        duration: nextDuration,
+        currentTime: nextCurrentTime,
+        playing: nextPlaying,
+        paused: nextPaused,
+      };
+    });
+  }, [projectDuration]);
 
   const commits = getVisibleCommits(historyState);
 
@@ -416,6 +479,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     const arrayBuffer = await file.arrayBuffer();
     const buffer = await engine.decodeAudioData(arrayBuffer);
     engine.setTrackBuffer(trackIndex, buffer);
+    setTrackDurations((prev) => {
+      const next = [...prev];
+      next[trackIndex] = buffer.duration;
+      return next;
+    });
 
     const diff: MixPatchOp[] = [
       { op: "replace", path: `/tracks/${trackIndex}/fileName`, value: file.name },
@@ -427,7 +495,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   const handlePlay = () => {
-    if (transport.playing) {
+    if (!canPlay || transport.playing) {
       return;
     }
     const engine = engineRef.current;
@@ -518,7 +586,24 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     };
   }, [transport.playing, transport.duration]);
 
-  const playheadPercent = clamp((transport.currentTime / transport.duration) * 100, 0, 100);
+  const playheadPercent =
+    transport.duration > 0
+      ? clamp((transport.currentTime / transport.duration) * 100, 0, 100)
+      : 0;
+  const timelineMarks = useMemo(() => {
+    if (transport.duration <= 0) {
+      return [0];
+    }
+    const marks: number[] = [];
+    const step = 5;
+    for (let mark = 0; mark <= transport.duration; mark += step) {
+      marks.push(mark);
+    }
+    if (marks[marks.length - 1] !== transport.duration) {
+      marks.push(transport.duration);
+    }
+    return marks;
+  }, [transport.duration]);
 
   return (
     <main className="app-shell">
@@ -533,7 +618,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               className="button"
               type="button"
               onClick={transport.playing ? handlePause : handlePlay}
-              disabled={!hasPlayableAudio}
+              disabled={!canPlay}
             >
               {transport.playing ? "Pause" : "Play"}
             </button>{" "}
@@ -557,7 +642,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
         <div className="timeline">
           <div className="timeline-ruler">
-            {TIMELINE_MARKS.map((mark) => (
+            {timelineMarks.map((mark) => (
               <div className="timeline-mark" key={`timeline-${mark}`}>
                 {mark}s
               </div>
