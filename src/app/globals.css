@@ -112,6 +112,13 @@ main {
   font-weight: 600;
 }
 
+.playback-time {
+  display: inline-block;
+  width: 180px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .transport-bar {
   display: flex;
   flex-wrap: wrap;

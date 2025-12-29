@@ -13,7 +13,7 @@ type SliderDefinition = {
 const DEMO_VOICE_URL = "/demo-audio/demo-voice.mp3";
 
 const DEFAULT_PARAMS: MacroParameters = {
-  drive: 0.3,
+  drive: 0.01,
   punch: 0.45,
   body: 0.5,
   presence: 0.5,
@@ -214,7 +214,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </div>
             <div>
               <span className="meta-label">Playback</span>
-              <span className="meta-value">
+              <span className="meta-value playback-time">
                 {formatTime(playbackTime)} / {formatTime(duration)}
               </span>
             </div>
