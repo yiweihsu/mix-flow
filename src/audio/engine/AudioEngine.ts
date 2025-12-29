@@ -15,6 +15,7 @@ type TrackNodes = {
 export class AudioEngine {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private masterCompressor: DynamicsCompressorNode | null = null;
   private masterPan: StereoPannerNode | null = null;
   private reverb: ConvolverNode | null = null;
   private tracks: TrackNodes[] = [];
@@ -52,16 +53,26 @@ export class AudioEngine {
 
     const context = new AudioContext();
     const masterGain = context.createGain();
+    const masterCompressor = context.createDynamicsCompressor();
     const masterPan = context.createStereoPanner();
     const reverb = context.createConvolver();
     reverb.buffer = this.createImpulseResponse(context);
 
-    masterGain.connect(masterPan);
+    masterCompressor.threshold.value = -18;
+    masterCompressor.ratio.value = 2;
+    masterCompressor.attack.value = 0.03;
+    masterCompressor.release.value = 0.25;
+    masterCompressor.knee.value = 12;
+
+    // Gentle bus glue: cohesion over loudness.
+    masterGain.connect(masterCompressor);
+    masterCompressor.connect(masterPan);
     masterPan.connect(context.destination);
     reverb.connect(masterGain);
 
     this.context = context;
     this.masterGain = masterGain;
+    this.masterCompressor = masterCompressor;
     this.masterPan = masterPan;
     this.reverb = reverb;
     this.tracks = tracks.map((track) => {
@@ -213,7 +224,7 @@ export class AudioEngine {
   }
 
   update(mixState: MixState) {
-    if (!this.context || !this.masterGain || !this.masterPan) {
+    if (!this.context || !this.masterGain || !this.masterCompressor || !this.masterPan) {
       return;
     }
 
@@ -260,6 +271,10 @@ export class AudioEngine {
       this.masterGain.disconnect();
     }
 
+    if (this.masterCompressor) {
+      this.masterCompressor.disconnect();
+    }
+
     if (this.masterPan) {
       this.masterPan.disconnect();
     }
@@ -274,6 +289,7 @@ export class AudioEngine {
 
     this.context = null;
     this.masterGain = null;
+    this.masterCompressor = null;
     this.masterPan = null;
     this.reverb = null;
     this.playing = false;
