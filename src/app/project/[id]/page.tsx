@@ -253,6 +253,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 {isExporting ? "Rendering..." : "Export Rendered Audio"}
               </button>
             </div>
+            <div className="transport-time">
+              <span className="playback-time">
+                {formatTime(playbackTime)} / {formatTime(duration)}
+              </span>
+            </div>
             <div className="preset-strip">
               <div>
                 <span className="preset-label">Presets</span>
@@ -273,11 +278,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 ))}
               </div>
             </div>
-          </div>
-          <div className="transport-time">
-            <span className="playback-time">
-              {formatTime(playbackTime)} / {formatTime(duration)}
-            </span>
           </div>
         </div>
 

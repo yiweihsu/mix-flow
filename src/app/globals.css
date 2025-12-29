@@ -114,8 +114,9 @@ main {
 
 .playback-time {
   display: inline-block;
-  width: 180px;
-  text-align: right;
+  width: 20ch;
+  text-align: center;
+  font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -129,7 +130,7 @@ main {
 .transport-center {
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .transport-buttons {
@@ -140,9 +141,10 @@ main {
 }
 
 .transport-time {
-  justify-self: end;
   color: var(--muted);
   font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
 }
 
 .output-panel {
