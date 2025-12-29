@@ -23,6 +23,7 @@ type ProcessingChain = {
   reverb: ConvolverNode;
   reverbReturn: GainNode;
   outputGain: GainNode;
+  masterGain: GainNode;
 };
 
 export class AudioEngine {
@@ -33,6 +34,7 @@ export class AudioEngine {
   private playing = false;
   private startTime = 0;
   private pauseOffset = 0;
+  private outputVolume = 0.8;
 
   private createImpulseResponse(context: BaseAudioContext) {
     const duration = 1.6;
@@ -135,6 +137,8 @@ export class AudioEngine {
 
     const outputGain = context.createGain();
     outputGain.gain.value = 0.85;
+    const masterGain = context.createGain();
+    masterGain.gain.value = this.outputVolume;
 
     inputGain.connect(drive);
     drive.connect(body);
@@ -160,7 +164,8 @@ export class AudioEngine {
     reverb.connect(reverbReturn);
     reverbReturn.connect(outputGain);
 
-    outputGain.connect(context.destination);
+    outputGain.connect(masterGain);
+    masterGain.connect(context.destination);
 
     return {
       inputGain,
@@ -185,6 +190,7 @@ export class AudioEngine {
       reverb,
       reverbReturn,
       outputGain,
+      masterGain,
     } satisfies ProcessingChain;
   }
 
@@ -305,11 +311,12 @@ export class AudioEngine {
     this.playing = false;
   }
 
-  update(params: MacroParameters) {
+  update(params: MacroParameters, outputVolume: number = this.outputVolume) {
     if (!this.context || !this.chain) {
       return;
     }
 
+    this.outputVolume = outputVolume;
     const timeConstant = 0.05;
 
     this.chain.drive.curve = this.createDriveCurve(params.drive);
@@ -367,9 +374,11 @@ export class AudioEngine {
       timeConstant,
     );
     this.chain.motionLfo.frequency.value = this.mapRange(params.motion, 0, 1, 0.05, 0.35);
+
+    this.applySmoothing(this.chain.masterGain.gain, outputVolume, timeConstant);
   }
 
-  async renderOffline(params: MacroParameters) {
+  async renderOffline(params: MacroParameters, outputVolume: number = this.outputVolume) {
     if (!this.buffer) {
       throw new Error("No audio buffer loaded.");
     }
@@ -414,6 +423,7 @@ export class AudioEngine {
 
     chain.motionDepth.gain.value = this.mapRange(params.motion, 0, 1, 0, 0.3);
     chain.motionLfo.frequency.value = this.mapRange(params.motion, 0, 1, 0.05, 0.35);
+    chain.masterGain.gain.value = outputVolume;
 
     source.start(0);
     return offline.startRendering();
@@ -444,6 +454,7 @@ export class AudioEngine {
       this.chain.reverb.disconnect();
       this.chain.reverbReturn.disconnect();
       this.chain.outputGain.disconnect();
+      this.chain.masterGain.disconnect();
     }
 
     if (this.context) {

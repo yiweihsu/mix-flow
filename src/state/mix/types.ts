@@ -23,6 +23,7 @@ export type MacroParameters = {
 
 export type MixState = {
   params: MacroParameters;
+  outputVolume: number;
 };
 
 export type MixPatchOp = {

@@ -24,6 +24,7 @@ const DEFAULT_PARAMS: MacroParameters = {
   density: 0.5,
   character: 0.5,
 };
+const DEFAULT_OUTPUT_VOLUME = 0.8;
 
 const SLIDERS: SliderDefinition[] = [
   { key: "drive", label: "Drive", description: "Harmonic energy + saturation." },
@@ -96,6 +97,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const engineRef = useRef<AudioEngine | null>(null);
   const [paramsState, setParamsState] = useState<MacroParameters>(DEFAULT_PARAMS);
+  const [outputVolume, setOutputVolume] = useState(DEFAULT_OUTPUT_VOLUME);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -111,7 +113,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     const engine = new AudioEngine();
     engine.init();
-    engine.update(paramsState);
+    engine.update(paramsState, DEFAULT_OUTPUT_VOLUME);
     engineRef.current = engine;
 
     let cancelled = false;
@@ -158,9 +160,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const updateParam = (key: keyof MacroParameters, value: number) => {
     setParamsState((prev) => {
       const next = { ...prev, [key]: value };
-      engineRef.current?.update(next);
+      engineRef.current?.update(next, outputVolume);
       return next;
     });
+  };
+
+  const updateOutputVolume = (value: number) => {
+    setOutputVolume(value);
+    engineRef.current?.update(paramsState, value);
   };
 
   const handleTransportToggle = () => {
@@ -183,7 +190,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
     setIsExporting(true);
     try {
-      const rendered = await engine.renderOffline(paramsState);
+      const rendered = await engine.renderOffline(paramsState, outputVolume);
       const blob = encodeWav(rendered);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
@@ -244,6 +251,24 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               {formatTime(playbackTime)} / {formatTime(duration)}
             </span>
           </div>
+        </div>
+
+        <div className="output-panel">
+          <div className="output-header">
+            <div>
+              <span className="output-label">Output</span>
+              <span className="output-description">Master output level.</span>
+            </div>
+            <span className="output-value">{outputVolume.toFixed(2)}</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.001}
+            value={outputVolume}
+            onChange={(event) => updateOutputVolume(Number(event.target.value))}
+          />
         </div>
 
         <div className="slider-grid">
