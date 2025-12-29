@@ -648,6 +648,32 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               </div>
             ))}
           </div>
+          <div className="timeline-tracks">
+            {mixState.tracks.map((track, index) => {
+              const clipDuration = trackDurations[index] ?? 0;
+              const clipLeft =
+                transport.duration > 0
+                  ? (track.startOffset / transport.duration) * 100
+                  : 0;
+              const clipWidth =
+                transport.duration > 0 ? (clipDuration / transport.duration) * 100 : 0;
+              const showClip = track.hasAudio && clipDuration > 0 && transport.duration > 0;
+
+              return (
+                <div className="timeline-track" key={`timeline-track-${index}`}>
+                  <div className="timeline-track-label">Track {index + 1}</div>
+                  <div className="timeline-track-lane">
+                    {showClip ? (
+                      <div
+                        className="timeline-clip"
+                        style={{ left: `${clipLeft}%`, width: `${clipWidth}%` }}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           <div className="timeline-playhead" style={{ left: `${playheadPercent}%` }} />
         </div>
 
