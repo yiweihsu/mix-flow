@@ -5,14 +5,14 @@ import { AudioEngine } from "@/audio/engine/AudioEngine";
 import { appendCommit, createHistoryState, getVisibleCommits, redo, undo } from "@/state/history/historyStore";
 import type { Commit } from "@/state/history/types";
 import { applyPatch } from "@/state/mix/reducer";
-import type { MixPatchOp, MixState, TrackState } from "@/state/mix/types";
+import type { MasterState, MixPatchOp, MixState, TrackState } from "@/state/mix/types";
 
 const createInitialMixState = (): MixState => ({
   tracks: [
-    { volume: 0.6, pan: -0.3, punch: 0.4, brightness: 0.5 },
-    { volume: 0.55, pan: 0.2, punch: 0.5, brightness: 0.6 },
-    { volume: 0.5, pan: -0.1, punch: 0.3, brightness: 0.4 },
-    { volume: 0.65, pan: 0.35, punch: 0.6, brightness: 0.7 },
+    { volume: 0.6, pan: -0.3, punch: 0.4, brightness: 0.5, fileName: undefined, hasAudio: false },
+    { volume: 0.55, pan: 0.2, punch: 0.5, brightness: 0.6, fileName: undefined, hasAudio: false },
+    { volume: 0.5, pan: -0.1, punch: 0.3, brightness: 0.4, fileName: undefined, hasAudio: false },
+    { volume: 0.65, pan: 0.35, punch: 0.6, brightness: 0.7, fileName: undefined, hasAudio: false },
   ],
   master: { volume: 0.8, pan: 0, punch: 0.5, brightness: 0.5 },
 });
@@ -157,7 +157,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     applyPatchWithCommit(author, `Set track ${trackIndex + 1} ${key}`, diff);
   };
 
-  const handleMasterChange = (key: keyof TrackState, value: number) => {
+  const handleMasterChange = (key: keyof MasterState, value: number) => {
     const diff: MixPatchOp[] = [
       {
         op: "replace",

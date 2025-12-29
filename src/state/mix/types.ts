@@ -3,11 +3,20 @@ export type TrackState = {
   pan: number;
   punch: number;
   brightness: number;
+  fileName?: string;
+  hasAudio: boolean;
+};
+
+export type MasterState = {
+  volume: number;
+  pan: number;
+  punch: number;
+  brightness: number;
 };
 
 export type MixState = {
   tracks: TrackState[];
-  master: TrackState;
+  master: MasterState;
 };
 
 export type MixPatchOp = {
