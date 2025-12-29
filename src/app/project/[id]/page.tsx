@@ -262,74 +262,71 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
               <span className="meta-label">Source</span>
               <span className="meta-value">{sourceStatus}</span>
             </div>
-            <div>
-              <span className="meta-label">Playback</span>
-              <span className="playback-time-box">
-                <span className="playback-time">
-                  {formatTime(playbackTime)} / {formatTime(duration)}
-                </span>
-              </span>
-            </div>
           </div>
         </header>
 
-        <div className="upload-panel">
-          <label className="button upload-button" htmlFor="audio-upload">
-            Upload audio
-          </label>
-          <input
-            id="audio-upload"
-            className="upload-input"
-            type="file"
-            accept="audio/*"
-            onChange={handleFileUpload}
-            disabled={isLoadingSource}
-          />
-          <button
-            className="button secondary"
-            type="button"
-            onClick={handleLoadDemo}
-            disabled={isLoadingSource}
-          >
-            Load demo
-          </button>
+        <div className="top-bar">
+          <div className="top-bar-left">
+            <label className="button upload-button" htmlFor="audio-upload">
+              Upload audio
+            </label>
+            <input
+              id="audio-upload"
+              className="upload-input"
+              type="file"
+              accept="audio/*"
+              onChange={handleFileUpload}
+              disabled={isLoadingSource}
+            />
+            <button
+              className="button secondary"
+              type="button"
+              onClick={handleLoadDemo}
+              disabled={isLoadingSource}
+            >
+              Load demo
+            </button>
+          </div>
+          <div className="top-bar-center">
+            <button
+              className="button"
+              type="button"
+              onClick={handleTransportToggle}
+              disabled={!isReady}
+            >
+              {isPlaying ? "Pause" : "Play"}
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              onClick={handleExport}
+              disabled={!isReady || isExporting}
+            >
+              {isExporting ? "Rendering..." : "Export Rendered Audio"}
+            </button>
+          </div>
+          <div className="top-bar-right">
+            <span className="playback-time-box">
+              <span className="playback-time">
+                {formatTime(playbackTime)} / {formatTime(duration)}
+              </span>
+            </span>
+          </div>
         </div>
 
-        <div className="transport-bar">
-          <div className="transport-spacer" />
-          <div className="transport-center">
-            <div className="transport-buttons">
+        <div className="preset-bar">
+          <span className="preset-label">Presets</span>
+          <div className="preset-pills">
+            {CHARACTER_PRESETS.map((preset) => (
               <button
-                className="button"
+                key={preset.id}
+                className={`preset-pill${selectedPresetId === preset.id ? " active" : ""}`}
                 type="button"
-                onClick={handleTransportToggle}
-                disabled={!isReady}
+                onClick={() => applyPreset(preset.id)}
               >
-                {isPlaying ? "Pause" : "Play"}
+                {preset.label}
               </button>
-              <button
-                className="button secondary"
-                type="button"
-                onClick={handleExport}
-                disabled={!isReady || isExporting}
-              >
-                {isExporting ? "Rendering..." : "Export Rendered Audio"}
-              </button>
-            </div>
-            <div className="preset-strip">
-              <div className="preset-pills">
-                {CHARACTER_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    className={`preset-pill${selectedPresetId === preset.id ? " active" : ""}`}
-                    type="button"
-                    onClick={() => applyPreset(preset.id)}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
