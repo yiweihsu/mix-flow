@@ -259,12 +259,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               </span>
             </div>
             <div className="preset-strip">
-              <div>
-                <span className="preset-label">Presets</span>
-                <span className="preset-description">
-                  Curated sound characters for quick starts.
-                </span>
-              </div>
               <div className="preset-pills">
                 {CHARACTER_PRESETS.map((preset) => (
                   <button

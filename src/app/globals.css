@@ -118,6 +118,7 @@ main {
   text-align: center;
   font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .transport-bar {
