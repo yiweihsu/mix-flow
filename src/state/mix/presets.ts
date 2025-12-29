@@ -20,6 +20,8 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
     name: "Intimate Pop Vocal",
     description: "Close, warm, and controlled with forward clarity.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.08,
       punch: 0.35,
       body: 0.6,
@@ -37,6 +39,8 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
     name: "Thick Rap Lead",
     description: "Dense, loud, and upfront with strong body and glue.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.18,
       punch: 0.5,
       body: 0.76,
@@ -54,6 +58,8 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
     name: "Dreamy Indie",
     description: "Soft transients with wide space and airy lift.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.06,
       punch: 0.25,
       body: 0.46,
@@ -71,6 +77,8 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
     name: "Radio Ready",
     description: "Balanced, modern, and clean with safe output headroom.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.1,
       punch: 0.5,
       body: 0.56,
@@ -88,6 +96,8 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
     name: "Whisper Close-Mic",
     description: "Very intimate and dry with high presence and air.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.02,
       punch: 0.15,
       body: 0.35,
@@ -105,6 +115,8 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
     name: "Lo-Fi Character",
     description: "Obvious tone shaping with reduced air and lively motion.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.22,
       punch: 0.35,
       body: 0.6,
@@ -135,6 +147,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     label: "Clean Spoken",
     description: "Balanced clarity with minimal space.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.05,
       punch: 0.4,
       body: 0.52,
@@ -153,6 +167,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     label: "Warm R&B",
     description: "Smooth lows with gentle lift.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.12,
       punch: 0.35,
       body: 0.72,
@@ -171,6 +187,8 @@ export const CHARACTER_PRESETS: CharacterPreset[] = [
     label: "Dreamy Ambient",
     description: "Soft transients with wider space.",
     params: {
+      noiseClean: 0,
+      roomControl: 0,
       drive: 0.06,
       punch: 0.22,
       body: 0.44,

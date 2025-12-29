@@ -1,4 +1,8 @@
 export type MacroParameters = {
+  /** Normalized (0 -> 1). Controls background noise cleanup. */
+  noiseClean: number;
+  /** Normalized (0 -> 1). Controls perceived room reduction. */
+  roomControl: number;
   /** Normalized (0 -> 1). Controls saturation/harmonic energy. */
   drive: number;
   /** Normalized (0 -> 1). Controls transient emphasis and attack shaping. */

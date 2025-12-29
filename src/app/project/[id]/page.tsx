@@ -17,6 +17,8 @@ const DEFAULT_PARAMS: MacroParameters = DEFAULT_CHARACTER_PRESET.params;
 const DEFAULT_OUTPUT_VOLUME = DEFAULT_CHARACTER_PRESET.masterOutput;
 
 const SLIDERS: SliderDefinition[] = [
+  { key: "noiseClean", label: "Noise Clean", description: "Tame background noise gently." },
+  { key: "roomControl", label: "Room Control", description: "Reduce roominess for a closer vocal." },
   { key: "drive", label: "Drive", description: "Harmonic energy + saturation." },
   { key: "punch", label: "Punch", description: "Transient emphasis + attack." },
   { key: "body", label: "Body", description: "Low-mid weight + thickness." },

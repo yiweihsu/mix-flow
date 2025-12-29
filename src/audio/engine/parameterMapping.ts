@@ -7,6 +7,14 @@ type ParameterMapping = {
 
 // Conceptual mapping only. These describe intent, not concrete DSP nodes.
 export const trackParameterMapping: Record<keyof MacroParameters, ParameterMapping> = {
+  noiseClean: {
+    affects: ["noiseFloor", "rumbleControl", "cleanupGate"],
+    description: "Cleans up background noise without over-drying the vocal.",
+  },
+  roomControl: {
+    affects: ["roomTone", "dryness", "proximityFeel"],
+    description: "Makes the vocal feel closer and less roomy.",
+  },
   drive: {
     affects: ["saturationCurve", "harmonicDensity", "softClipAmount"],
     description: "Adds harmonic energy and excitement with controlled saturation.",
