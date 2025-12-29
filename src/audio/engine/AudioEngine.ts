@@ -60,6 +60,20 @@ export class AudioEngine {
     return this.context.decodeAudioData(data);
   }
 
+  async fetchAudioBuffer(url: string) {
+    if (!this.context) {
+      throw new Error("Audio engine not initialized.");
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load audio: ${response.statusText}`);
+    }
+
+    const data = await response.arrayBuffer();
+    return this.context.decodeAudioData(data);
+  }
+
   setTrackBuffer(index: number, buffer: AudioBuffer | null) {
     const track = this.tracks[index];
     if (!track) {

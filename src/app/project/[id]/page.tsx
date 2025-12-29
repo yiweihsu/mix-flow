@@ -7,8 +7,21 @@ import type { Commit } from "@/state/history/types";
 import { applyPatch } from "@/state/mix/reducer";
 import type { MasterState, MixPatchOp, MixState, TrackState } from "@/state/mix/types";
 
-const createInitialMixState = (): MixState => ({
-  tracks: [
+type DemoAsset = {
+  fileName: string;
+  url: string;
+};
+
+// Demo audio - for testing only.
+const DEMO_ASSETS: DemoAsset[] = [
+  { fileName: "demo-drums.mp3", url: "/demo-audio/demo-drums.mp3" },
+  { fileName: "demo-bass.mp3", url: "/demo-audio/demo-bass.mp3" },
+  { fileName: "demo-bed.mp3", url: "/demo-audio/demo-bed.mp3" },
+  { fileName: "demo-voice.mp3", url: "/demo-audio/demo-voice.mp3" },
+];
+
+const createInitialMixState = (demoAssets?: DemoAsset[]): MixState => {
+  const baseTracks = [
     {
       volume: 0.6,
       pan: -0.3,
@@ -16,8 +29,6 @@ const createInitialMixState = (): MixState => ({
       brightness: 0.5,
       presence: 0.5,
       space: 0,
-      fileName: undefined,
-      hasAudio: false,
     },
     {
       volume: 0.55,
@@ -26,8 +37,6 @@ const createInitialMixState = (): MixState => ({
       brightness: 0.6,
       presence: 0.5,
       space: 0,
-      fileName: undefined,
-      hasAudio: false,
     },
     {
       volume: 0.5,
@@ -36,8 +45,6 @@ const createInitialMixState = (): MixState => ({
       brightness: 0.4,
       presence: 0.5,
       space: 0,
-      fileName: undefined,
-      hasAudio: false,
     },
     {
       volume: 0.65,
@@ -46,12 +53,22 @@ const createInitialMixState = (): MixState => ({
       brightness: 0.7,
       presence: 0.5,
       space: 0,
-      fileName: undefined,
-      hasAudio: false,
     },
-  ],
-  master: { volume: 0.8, pan: 0, punch: 0.5, brightness: 0.5 },
-});
+  ];
+
+  return {
+    tracks: baseTracks.map((track, index) => {
+      const demoAsset = demoAssets?.[index];
+      return {
+        ...track,
+        fileName: demoAsset?.fileName,
+        hasAudio: Boolean(demoAsset),
+        isDemo: Boolean(demoAsset),
+      };
+    }),
+    master: { volume: 0.8, pan: 0, punch: 0.5, brightness: 0.5 },
+  };
+};
 
 const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value));
@@ -135,12 +152,17 @@ const formatValue = (value: number) => value.toFixed(2);
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const initialMixState = useMemo(() => createInitialMixState(), []);
+  const isDemoProject = id === "demo";
+  const initialMixState = useMemo(
+    () => createInitialMixState(isDemoProject ? DEMO_ASSETS : undefined),
+    [isDemoProject],
+  );
   const [mixState, setMixState] = useState<MixState>(initialMixState);
   const [historyState, setHistoryState] = useState(createHistoryState());
   const [prompt, setPrompt] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null);
+  const mixStateRef = useRef(mixState);
   const canUndo = historyState.cursor >= 0;
   const canRedo = historyState.cursor < historyState.commits.length - 1;
   const hasPlayableAudio = mixState.tracks.some((track) => track.hasAudio);
@@ -154,6 +176,45 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     return () => engine.dispose();
   }, [initialMixState]);
+
+  useEffect(() => {
+    mixStateRef.current = mixState;
+  }, [mixState]);
+
+  useEffect(() => {
+    if (!isDemoProject) {
+      return;
+    }
+
+    const engine = engineRef.current;
+    if (!engine) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadDemoAudio = async () => {
+      await Promise.all(
+        DEMO_ASSETS.map(async (asset, index) => {
+          try {
+            const buffer = await engine.fetchAudioBuffer(asset.url);
+            if (cancelled || !mixStateRef.current.tracks[index]?.isDemo) {
+              return;
+            }
+            engine.setTrackBuffer(index, buffer);
+          } catch (error) {
+            console.error(`Failed to load demo audio (${asset.fileName})`, error);
+          }
+        }),
+      );
+    };
+
+    void loadDemoAudio();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoProject]);
 
   useEffect(() => {
     engineRef.current?.update(mixState);
@@ -234,6 +295,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     const diff: MixPatchOp[] = [
       { op: "replace", path: `/tracks/${trackIndex}/fileName`, value: file.name },
       { op: "replace", path: `/tracks/${trackIndex}/hasAudio`, value: true },
+      { op: "replace", path: `/tracks/${trackIndex}/isDemo`, value: false },
     ];
 
     applyPatchWithCommit("user", `Load audio into Track ${trackIndex + 1}`, diff);
