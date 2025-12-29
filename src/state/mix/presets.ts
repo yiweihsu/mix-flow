@@ -7,6 +7,14 @@ type GoldenPreset = {
   masterOutput: number;
 };
 
+type CharacterPreset = {
+  id: string;
+  label: string;
+  description: string;
+  params: MacroParameters;
+  masterOutput: number;
+};
+
 export const GOLDEN_PRESETS: GoldenPreset[] = [
   {
     name: "Intimate Pop Vocal",
@@ -113,3 +121,69 @@ export const GOLDEN_PRESETS: GoldenPreset[] = [
 ];
 
 export const DEFAULT_PRESET = GOLDEN_PRESETS[0];
+
+export const CHARACTER_PRESETS: CharacterPreset[] = [
+  {
+    id: "intimate-pop",
+    label: "Intimate Pop",
+    description: "Close, warm, and controlled.",
+    params: { ...GOLDEN_PRESETS[0].params },
+    masterOutput: GOLDEN_PRESETS[0].masterOutput,
+  },
+  {
+    id: "clean-spoken",
+    label: "Clean Spoken",
+    description: "Balanced clarity with minimal space.",
+    params: {
+      drive: 0.05,
+      punch: 0.4,
+      body: 0.52,
+      presence: 0.6,
+      air: 0.5,
+      space: 0.12,
+      width: 0.18,
+      motion: 0.12,
+      density: 0.5,
+      character: 0.5,
+    },
+    masterOutput: 0.8,
+  },
+  {
+    id: "warm-rnb",
+    label: "Warm R&B",
+    description: "Smooth lows with gentle lift.",
+    params: {
+      drive: 0.12,
+      punch: 0.35,
+      body: 0.72,
+      presence: 0.5,
+      air: 0.42,
+      space: 0.22,
+      width: 0.32,
+      motion: 0.2,
+      density: 0.6,
+      character: 0.45,
+    },
+    masterOutput: 0.78,
+  },
+  {
+    id: "dreamy-ambient",
+    label: "Dreamy Ambient",
+    description: "Soft transients with wider space.",
+    params: {
+      drive: 0.06,
+      punch: 0.22,
+      body: 0.44,
+      presence: 0.48,
+      air: 0.76,
+      space: 0.6,
+      width: 0.7,
+      motion: 0.4,
+      density: 0.4,
+      character: 0.6,
+    },
+    masterOutput: 0.8,
+  },
+];
+
+export const DEFAULT_CHARACTER_PRESET = CHARACTER_PRESETS[0];

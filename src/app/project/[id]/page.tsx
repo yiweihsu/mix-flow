@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import { AudioEngine } from "@/audio/engine/AudioEngine";
 import type { MacroParameters } from "@/state/mix/types";
-import { DEFAULT_PRESET, GOLDEN_PRESETS } from "@/state/mix/presets";
+import { CHARACTER_PRESETS, DEFAULT_CHARACTER_PRESET } from "@/state/mix/presets";
 
 type SliderDefinition = {
   key: keyof MacroParameters;
@@ -13,8 +13,8 @@ type SliderDefinition = {
 
 const DEMO_VOICE_URL = "/demo-audio/demo-voice.mp3";
 
-const DEFAULT_PARAMS: MacroParameters = DEFAULT_PRESET.params;
-const DEFAULT_OUTPUT_VOLUME = DEFAULT_PRESET.masterOutput;
+const DEFAULT_PARAMS: MacroParameters = DEFAULT_CHARACTER_PRESET.params;
+const DEFAULT_OUTPUT_VOLUME = DEFAULT_CHARACTER_PRESET.masterOutput;
 
 const SLIDERS: SliderDefinition[] = [
   { key: "drive", label: "Drive", description: "Harmonic energy + saturation." },
@@ -88,8 +88,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const engineRef = useRef<AudioEngine | null>(null);
   const [paramsState, setParamsState] = useState<MacroParameters>(DEFAULT_PARAMS);
   const [outputVolume, setOutputVolume] = useState(DEFAULT_OUTPUT_VOLUME);
-  const [selectedPresetName, setSelectedPresetName] = useState(DEFAULT_PRESET.name);
-  const [historyEntries, setHistoryEntries] = useState<string[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState(DEFAULT_CHARACTER_PRESET.id);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -162,21 +161,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     engineRef.current?.update(paramsState, value);
   };
 
-  const applyPreset = (presetName: string) => {
-    const preset = GOLDEN_PRESETS.find((item) => item.name === presetName);
+  const applyPreset = (presetId: string) => {
+    const preset = CHARACTER_PRESETS.find((item) => item.id === presetId);
     if (!preset) {
       return;
     }
     const nextParams = { ...preset.params };
     const nextOutput = preset.masterOutput;
-    setSelectedPresetName(preset.name);
+    setSelectedPresetId(preset.id);
     setParamsState(nextParams);
     setOutputVolume(nextOutput);
     engineRef.current?.update(nextParams, nextOutput);
-    setHistoryEntries((prev) => {
-      const next = [`Apply preset: ${preset.name}`, ...prev];
-      return next.slice(0, 6);
-    });
   };
 
   const handleTransportToggle = () => {
@@ -237,23 +232,45 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
         <div className="transport-bar">
           <div className="transport-spacer" />
-          <div className="transport-buttons">
-            <button
-              className="button"
-              type="button"
-              onClick={handleTransportToggle}
-              disabled={!isReady}
-            >
-              {isPlaying ? "Pause" : "Play"}
-            </button>
-            <button
-              className="button secondary"
-              type="button"
-              onClick={handleExport}
-              disabled={!isReady || isExporting}
-            >
-              {isExporting ? "Rendering..." : "Export Rendered Audio"}
-            </button>
+          <div className="transport-center">
+            <div className="transport-buttons">
+              <button
+                className="button"
+                type="button"
+                onClick={handleTransportToggle}
+                disabled={!isReady}
+              >
+                {isPlaying ? "Pause" : "Play"}
+              </button>
+              <button
+                className="button secondary"
+                type="button"
+                onClick={handleExport}
+                disabled={!isReady || isExporting}
+              >
+                {isExporting ? "Rendering..." : "Export Rendered Audio"}
+              </button>
+            </div>
+            <div className="preset-strip">
+              <div>
+                <span className="preset-label">Presets</span>
+                <span className="preset-description">
+                  Curated sound characters for quick starts.
+                </span>
+              </div>
+              <div className="preset-pills">
+                {CHARACTER_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    className={`preset-pill${selectedPresetId === preset.id ? " active" : ""}`}
+                    type="button"
+                    onClick={() => applyPreset(preset.id)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="transport-time">
             <span className="playback-time">
@@ -278,41 +295,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             value={outputVolume}
             onChange={(event) => updateOutputVolume(Number(event.target.value))}
           />
-        </div>
-
-        <div className="preset-panel">
-          <div className="preset-header">
-            <div>
-              <span className="preset-label">Golden Presets</span>
-              <span className="preset-description">
-                Curated vocal starting points for the instrument.
-              </span>
-            </div>
-            <span className="preset-value">{selectedPresetName}</span>
-          </div>
-          <div className="preset-controls">
-            <select
-              className="preset-select"
-              value={selectedPresetName}
-              onChange={(event) => applyPreset(event.target.value)}
-            >
-              {GOLDEN_PRESETS.map((preset) => (
-                <option key={preset.name} value={preset.name}>
-                  {preset.name}
-                </option>
-              ))}
-            </select>
-            <span className="preset-note">
-              {GOLDEN_PRESETS.find((preset) => preset.name === selectedPresetName)
-                ?.description ?? ""}
-            </span>
-          </div>
-          <div className="preset-history">
-            <span className="preset-history-label">History</span>
-            <span className="preset-history-entry">
-              {historyEntries[0] ?? "No preset changes yet."}
-            </span>
-          </div>
         </div>
 
         <div className="slider-grid">
